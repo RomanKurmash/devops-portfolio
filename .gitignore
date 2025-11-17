@@ -1,0 +1,19 @@
+# Docker
+**/node_modules/
+**/__pycache__/
+*.log
+
+# SSL сертифікати
+ssl/*.key
+ssl/*.crt
+ssl/*.pem
+
+# Дані Grafana та Prometheus
+grafana/data/
+prometheus/data/
+
+# Службові файли Windows
+.env
+.vscode/
+Thumbs.db
+Desktop.ini
