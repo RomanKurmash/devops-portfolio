@@ -1,6 +1,37 @@
-version: '3.8'
 
 services:
+  # База даних для WordPress
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wpuser
+      MYSQL_PASSWORD: wppassword
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - monitor-net
+    restart: unless-stopped
+
+  # WordPress
+  wordpress:
+    image: wordpress:latest
+    container_name: wordpress-app
+    environment:
+      WORDPRESS_DB_HOST: mysql
+      WORDPRESS_DB_USER: wpuser
+      WORDPRESS_DB_PASSWORD: wppassword
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wp_data:/var/www/html
+    depends_on:
+      - mysql
+    networks:
+      - monitor-net
+    restart: unless-stopped
+
   nginx:
     image: nginx:alpine
     container_name: nginx-proxy
@@ -53,6 +84,8 @@ services:
 volumes:
   prometheus_data:
   grafana_data:
+  mysql_data:
+  wp_data:
 
 networks:
   monitor-net:
