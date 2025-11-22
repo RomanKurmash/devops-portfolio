@@ -1,0 +1,85 @@
+groups:
+  - name: infrastructure
+    rules:
+      # Тестовий алерт
+      - alert: AlertingSystemWorking
+        expr: vector(1)
+        labels:
+          severity: info
+          service: monitoring
+        annotations:
+          summary: "Alerting system is functional"
+          description: "This test alert confirms the alerting pipeline works"
+
+      # Nginx алерти
+      - alert: NginxExporterDown
+        expr: up{job="nginx"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: nginx
+        annotations:
+          summary: "Nginx exporter is down"
+          description: "Nginx exporter has been down for more than 1 minute"
+
+      - alert: NginxServiceDown
+        expr: absent(nginx_connections_active)
+        for: 2m
+        labels:
+          severity: critical
+          service: nginx
+        annotations:
+          summary: "Nginx service is not responding"
+          description: "Nginx is not providing metrics - service is likely down"
+
+      # MySQL алерти
+      - alert: MySQLExporterDown
+        expr: up{job="mysql"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: mysql
+        annotations:
+          summary: "MySQL exporter is down"
+          description: "MySQL exporter has been down for more than 1 minute"
+
+      - alert: MySQLServiceDown
+        expr: mysql_up == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: mysql
+        annotations:
+          summary: "MySQL database is not responding"
+          description: "MySQL database is down or not accessible"
+
+      # Node алерти
+      - alert: NodeExporterDown
+        expr: up{job="node"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "Node exporter is down"
+          description: "Node exporter has been down for more than 1 minute"
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 2m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 80% for 2 minutes"
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 2m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 90% for 2 minutes"

@@ -18,3 +18,18 @@ scrape_configs:
     metrics_path: /wp-json
     scrape_interval: 60s
     # WordPress не віддає метрики, тому просто моніторимо доступність
+
+  - job_name: 'mysql'
+    static_configs:
+      - targets: ['mysql-exporter:9104']
+    scrape_interval: 30s
+    # Використовуємо окремий експортер для MySQL
+
+rule_files:
+  - "alerts.yml" # Підключення файлу з правилами алертів
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
