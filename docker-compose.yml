@@ -153,11 +153,54 @@ services:
       - monitor-net
     restart: unless-stopped
 
+# Jenkins CI Server
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/local/bin/docker-compose:/usr/local/bin/docker-compose:ro
+      - /usr/bin/docker:/usr/bin/docker:ro
+    networks:
+      - monitor-net
+    restart: unless-stopped
+
+# Jenkins Docker Agent
+  jenkins-agent:  
+    image: jenkins/ssh-agent:alpine-jdk17
+    container_name: jenkins-docker-agent
+    environment:
+      - JENKINS_AGENT_SSH_PUBKEY=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDIfUzCOeq5Eug6IXvQtNWBPb53pBXHSXqJkSJCjURIe0xTASQKrniFSpxWwC1iihjB83Mx4VsKGp/j32ptidn+s1bx7J5jj14kRffqtfYe6h31+CjynPvsfHgPmQKITO5OD0QpgqaPKtt+ei+oKdmjtZ5ulmjfM1oDCj11GLquR6sQ74i4EltKwg+uVcWcxO1gBoWTvkXV8krbCN6wwIWCQdR4BuAFMA3VrmwOzHnVNfI7VBmD90Ws/TdMeV6fVI1kxccNZclXlcv0s33D8qBHJoNBy1R5f1/4PqT7jeM8jKSuaDp6mdWOlrp974f5Sk/LfH1BEPWtskMUSxD3jVv/HDgl+hhGtzYmNfVVibFYU+GSF0bmxAxCtXTGxtY0vWhp7/hzfrBPR/g16FvK/Zjgj1ffM5ZpTfuLXqG2wjYVAzVAN7U35ThIcufDBb9iMuH6rn1lG5sTzFtel3gr9HqkIPQlymGUrsXDNiEV+Ws1fDXvMKwNgNMA2yPTDyNcKaD0fLq9rbj6OW/VaffSzV6P+1vQTryDGEeyg57a2X8a1qKXJHz1n94WCgcmHQPaikAoNoV+Y+V2850EC6R5LKrQfF4WrJC+zG6HxGUkteU/qU5Cag3Hi8E2lWUfGK0fIeNeZYKkUKO7ctjkd7QnbEfP5oEHuIuat5blezyuymG7iQ==
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "2222:22"
+    command: >
+      sh -c "
+        echo '🚀 Installing Docker...' &&
+        apk update &&
+        apk add --no-cache docker-cli docker-compose &&
+        echo '✅ Docker installed successfully' &&
+        docker --version &&
+        docker-compose --version &&
+        echo '🔑 Generating SSH host keys...' &&
+        ssh-keygen -A &&
+        echo '🎯 Starting SSH agent...' &&
+        /usr/sbin/sshd -D"
+    networks:
+      - monitor-net
+    restart: unless-stopped
+
 volumes:
   prometheus_data:
   grafana_data:
   mysql_data:
   wp_data:
+  jenkins_data:
 
 networks:
   monitor-net:
