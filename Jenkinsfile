@@ -4,7 +4,6 @@ pipeline {
     options {
         disableConcurrentBuilds()
         timeout(time: 20, unit: 'MINUTES')
-        retry(1)
     }
     
     environment {
@@ -13,253 +12,66 @@ pipeline {
     }
     
     stages {
-        stage('📥 Checkout & Validate') {
+        stage('📥 Checkout & Setup') {
             steps {
-                echo '🚀 Starting CI/CD Pipeline for DevOps Portfolio'
-                checkout scm
+                echo '🚀 Starting CI/CD Pipeline from SCM'
+                
+                script {
+                    // Автоматичний checkout через SCM - НЕ ДОДАВАТИ ДОДАТКОВИЙ GIT CHECKOUT
+                    echo "Workspace: ${env.WORKSPACE}"
+                }
                 
                 sh '''
-                    echo "=== 📁 WORKSPACE VALIDATION ==="
+                    echo "=== 📁 WORKSPACE CONTENTS ==="
                     pwd
                     ls -la
-                    echo "=== 🐳 DOCKER ENVIRONMENT CHECK ==="
+                    echo "=== 🐳 DOCKER CHECK ==="
                     docker --version
                     docker-compose --version
-                    echo "=== 📂 PROJECT STRUCTURE ==="
-                    find . -name "*.yml" -o -name "*.yaml" | head -20
+                    docker ps
                 '''
             }
         }
         
-        stage('🔧 Pre-Deployment Setup') {
+        stage('🚀 Deploy Stack') {
             steps {
                 sh """
-                    echo "=== 🛠️ PRE-DEPLOYMENT CONFIGURATION ==="
+                    echo "=== 🚀 DEPLOYING STACK ==="
                     cd ${INFRA_DIR}
                     
-                    # Створюємо необхідні мережі
-                    echo "📡 Setting up Docker networks..."
-                    docker network create ${COMPOSE_PROJECT_NAME}_apps-net 2>/dev/null || echo "Network apps-net already exists"
-                    docker network create ${COMPOSE_PROJECT_NAME}_monitor-net 2>/dev/null || echo "Network monitor-net already exists"
-                    
-                    # Фікс конфігурації MySQL Exporter
-                    echo "🔧 Configuring MySQL Exporter..."
-                    if [ -f "mysql-exporter/my.cnf" ]; then
-                        # Видаляємо будь-які не-ASCII символи з початку файлу
-                        sed -i '1s/^[^a-zA-Z[]*//' mysql-exporter/my.cnf
-                        echo "✅ MySQL Exporter config cleaned"
-                    else
-                        echo "⚠️ MySQL Exporter config not found, creating default..."
-                        mkdir -p mysql-exporter
-                        cat > mysql-exporter/my.cnf << 'EOF'
-[client]
-user=exporter
-password=password
-host=mysql
-EOF
-                    fi
-                    
-                    # Перевіряємо всі необхідні файли
-                    echo "📋 Verifying configuration files..."
-                    ls -la docker-compose*.yml 2>/dev/null && echo "✅ Compose files found" || echo "❌ Compose files missing"
-                """
-            }
-        }
-        
-        stage('🛑 Clean Previous Deployment') {
-            steps {
-                sh """
-                    echo "=== 🧹 CLEANING PREVIOUS DEPLOYMENT ==="
-                    cd ${INFRA_DIR}
-                    
-                    # Зупиняємо та видаляємо попередні контейнери
-                    docker-compose -f docker-compose.apps.yml down --remove-orphans 2>/dev/null || echo "No previous apps to clean"
-                    docker-compose -f docker-compose.monitoring.yml down --remove-orphans 2>/dev/null || echo "No previous monitoring to clean"
-                    
-                    echo "✅ Environment cleaned"
-                """
-            }
-        }
-        
-        stage('🚀 Deploy Applications') {
-            steps {
-                sh """
-                    echo "=== 🚀 DEPLOYING APPLICATIONS ==="
-                    cd ${INFRA_DIR}
+                    # Створюємо мережі
+                    docker network create ${COMPOSE_PROJECT_NAME}_apps-net 2>/dev/null || echo "Network exists"
+                    docker network create ${COMPOSE_PROJECT_NAME}_monitor-net 2>/dev/null || echo "Network exists"
                     
                     # Запускаємо додатки
-                    echo "📦 Starting WordPress stack..."
-                    docker-compose -f docker-compose.apps.yml up -d --build
-                    
-                    # Чекаємо ініціалізації
-                    echo "⏳ Waiting for applications to initialize..."
+                    docker-compose -f docker-compose.apps.yml up -d
                     sleep 30
                     
-                    # Перевіряємо статус
-                    echo "🔍 Applications status:"
-                    docker-compose -f docker-compose.apps.yml ps
-                    echo ""
-                    echo "📊 Applications logs (last 5 lines):"
-                    docker-compose -f docker-compose.apps.yml logs --tail=5 2>/dev/null || echo "No logs available"
-                """
-            }
-        }
-        
-        stage('📊 Deploy Monitoring') {
-            steps {
-                sh """
-                    echo "=== 📊 DEPLOYING MONITORING STACK ==="
-                    cd ${INFRA_DIR}
-                    
                     # Запускаємо моніторинг
-                    echo "📈 Starting monitoring services..."
-                    docker-compose -f docker-compose.monitoring.yml up -d --build
-                    
-                    # Чекаємо ініціалізації
-                    echo "⏳ Waiting for monitoring to start..."
-                    sleep 25
+                    docker-compose -f docker-compose.monitoring.yml up -d  
+                    sleep 20
                     
                     # Перевіряємо статус
-                    echo "🔍 Monitoring status:"
+                    echo "=== STATUS ==="
+                    docker-compose -f docker-compose.apps.yml ps
                     docker-compose -f docker-compose.monitoring.yml ps
-                    echo ""
-                    echo "📋 Monitoring logs (last 5 lines):"
-                    docker-compose -f docker-compose.monitoring.yml logs --tail=5 2>/dev/null || echo "No logs available"
-                """
-            }
-        }
-        
-        stage('✅ Health Checks & Validation') {
-            steps {
-                sh """
-                    echo "=== ✅ COMPREHENSIVE HEALTH CHECKS ==="
-                    
-                    # Функція для перевірки сервісів
-                    check_service() {
-                        local service=\$1
-                        local port=\$2
-                        local max_attempts=10
-                        local attempt=1
-                        
-                        echo "🔍 Checking \$service on port \$port..."
-                        
-                        while [ \$attempt -le \$max_attempts ]; do
-                            if nc -z localhost \$port 2>/dev/null; then
-                                echo "✅ \$service is HEALTHY (port \$port)"
-                                return 0
-                            fi
-                            echo "⏳ Waiting for \$service... (attempt \$attempt/\$max_attempts)"
-                            sleep 10
-                            attempt=\$((attempt + 1))
-                        done
-                        echo "❌ \$service is UNHEALTHY after \$max_attempts attempts"
-                        return 1
-                    }
-                    
-                    # Перевіряємо базову доступність портів
-                    echo "--- Port Availability Check ---"
-                    check_service "WordPress" "80" || echo "⚠️ WordPress might be still starting"
-                    check_service "Grafana" "3000" || echo "⚠️ Grafana might be still starting"
-                    check_service "Prometheus" "9090" || echo "⚠️ Prometheus might be still starting"
-                    check_service "Alertmanager" "9093" || echo "⚠️ Alertmanager might be still starting"
-                    
-                    # Детальний статус всіх контейнерів
-                    echo ""
-                    echo "--- Detailed Container Status ---"
-                    cd ${INFRA_DIR}
-                    echo "📦 APPLICATIONS:"
-                    docker-compose -f docker-compose.apps.yml ps -a
-                    echo ""
-                    echo "📊 MONITORING:"
-                    docker-compose -f docker-compose.monitoring.yml ps -a
-                    
-                    # Перевіряємо логи на критичні помилки
-                    echo ""
-                    echo "--- Error Log Check ---"
-                    echo "Applications:"
-                    docker-compose -f docker-compose.apps.yml logs --tail=10 2>/dev/null | grep -i "error\\|fail\\|exception" || echo "✅ No critical errors in apps"
-                    echo ""
-                    echo "Monitoring:"
-                    docker-compose -f docker-compose.monitoring.yml logs --tail=10 2>/dev/null | grep -i "error\\|fail\\|exception" || echo "✅ No critical errors in monitoring"
                 """
             }
         }
     }
     
     post {
-        always {
-            echo "=== 📊 DEPLOYMENT EXECUTION REPORT ==="
-            sh """
-                echo "--- Final Container Overview ---"
-                docker ps --format "table {{.Names}}\\t{{.Status}}\\t{{.Ports}}" 2>/dev/null | head -15
-                
-                echo ""
-                echo "--- Resource Usage Summary ---"
-                docker stats --no-stream --format "table {{.Name}}\\t{{.CPUPerc}}\\t{{.MemUsage}}" 2>/dev/null | head -10
-                
-                echo ""
-                echo "--- Network Configuration ---"
-                docker network ls | grep ${COMPOSE_PROJECT_NAME} || echo "No project networks found"
-                
-                echo ""
-                echo "--- Quick Access Guide ---"
-                echo "🌐 WordPress:     http://localhost"
-                echo "📊 Grafana:       http://localhost:3000 (admin/admin)"
-                echo "📈 Prometheus:    http://localhost:9090"
-                echo "🚨 Alertmanager:  http://localhost:9093"
-                echo "🔄 Jenkins:       http://localhost:8080"
-                echo ""
-                echo "--- Useful Commands ---"
-                echo "View all logs:    cd ${INFRA_DIR} && docker-compose logs"
-                echo "Restart services: cd ${INFRA_DIR} && docker-compose restart"
-                echo "Stop all:         cd ${INFRA_DIR} && docker-compose down"
-            """
-            
-            // Cleanup on failure
-            script {
-                if (currentBuild.result == 'FAILURE') {
-                    echo "🧹 Performing cleanup due to pipeline failure..."
-                    sh """
-                        cd ${INFRA_DIR} || exit 0
-                        docker-compose -f docker-compose.apps.yml down 2>/dev/null || true
-                        docker-compose -f docker-compose.monitoring.yml down 2>/dev/null || true
-                    """
-                }
-            }
-        }
-        
         success {
-            echo "✅ 🎉 PIPELINE EXECUTED SUCCESSFULLY!"
-            echo "All services have been deployed and are running"
-            echo "Check the Quick Access Guide above for URLs"
-            
-            // Можна додати сповіщення тут
-            // telegramSend message: "✅ DevOps Portfolio deployed successfully!"
-            // slackSend channel: '#deployments', message: "Deployment completed successfully"
+            echo "✅ PIPELINE SUCCESS"
+            sh """
+                echo "=== QUICK ACCESS ==="
+                echo "WordPress: http://localhost"
+                echo "Grafana: http://localhost:3000"
+                echo "Prometheus: http://localhost:9090"
+            """
         }
-        
         failure {
             echo "❌ PIPELINE FAILED"
-            echo "Investigation steps:"
-            echo "1. Check container logs above"
-            echo "2. Verify Docker network configuration"
-            echo "3. Check resource availability (CPU, Memory)"
-            echo "4. Review application configuration files"
-            
-            sh """
-                echo "--- Debug Information ---"
-                echo "Docker system info:"
-                docker system df 2>/dev/null || echo "Docker not available"
-                echo ""
-                echo "Recent container events:"
-                docker events --since 10m --until 0 2>/dev/null | tail -10 || echo "Cannot retrieve events"
-            """
-        }
-        
-        unstable {
-            echo "⚠️ PIPELINE COMPLETED WITH WARNINGS"
-            echo "Some health checks failed but core services are running"
-            echo "Check the health check section above for details"
         }
     }
 }
