@@ -25,7 +25,6 @@ pipeline {
                     echo "=== 🐳 DOCKER ENVIRONMENT CHECK ==="
                     docker --version
                     docker-compose --version
-                    docker compose version
                     echo "=== 📂 PROJECT STRUCTURE ==="
                     find . -name "*.yml" -o -name "*.yaml" | head -20
                 '''
