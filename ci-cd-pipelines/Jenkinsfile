@@ -1,0 +1,129 @@
+pipeline {
+    agent any  // Використовуємо Jenkins Master
+    
+    options {
+        disableConcurrentBuilds()
+        timeout(time: 20, unit: 'MINUTES')
+    }
+    
+    environment {
+        COMPOSE_PROJECT_NAME = 'devops-portfolio'
+    }
+    
+    stages {
+        stage('📥 Checkout Code') {
+            steps {
+                echo '🚀 Starting Docker Pipeline on Jenkins Master'
+                git branch: 'main', 
+                url: 'https://github.com/RomanKurmash/devops-portfolio.git'
+                
+                sh '''
+                    echo "=== 📁 WORKSPACE ==="
+                    pwd
+                    ls -la
+                    echo "=== 🐳 DOCKER INFO ==="
+                    docker --version
+                    docker-compose --version
+                '''
+            }
+        }
+        
+        stage('🔧 Fix MySQL Exporter Config') {
+            steps {
+                sh '''
+                    echo "=== 🔧 FIXING MYSQL EXPORTER CONFIG ==="
+                    cd app-infrastructure
+                    sed -i '1s/^[^a-zA-Z[]*//' mysql-exporter/my.cnf
+                    echo "✅ my.cnf cleaned"
+                    cat mysql-exporter/my.cnf
+                '''
+            }
+        }
+        
+        stage('🚀 Deploy Applications') {
+            steps {
+                sh '''
+                    echo "=== 🚀 DEPLOYING APPLICATIONS ==="
+                    cd app-infrastructure
+                    docker network create app-infrastructure_apps-net 2>/dev/null || true
+                    docker-compose -f docker-compose.apps.yml up -d
+                    
+                    echo "=== ⏳ WAITING FOR APPS ==="
+                    sleep 30
+                    
+                    echo "=== 🔍 CHECKING APPLICATIONS ==="
+                    docker-compose -f docker-compose.apps.yml ps
+                '''
+            }
+        }
+        
+        stage('📊 Deploy Monitoring') {
+            steps {
+                sh '''
+                    echo "=== 📊 DEPLOYING MONITORING ==="
+                    cd app-infrastructure
+                    docker-compose -f docker-compose.monitoring.yml up -d
+                    
+                    echo "=== ⏳ WAITING FOR MONITORING ==="
+                    sleep 20
+                    
+                    echo "=== 🔍 CHECKING MONITORING ==="
+                    docker-compose -f docker-compose.monitoring.yml ps
+                '''
+            }
+        }
+        
+        stage('✅ Health Checks') {
+            steps {
+                sh '''
+                    echo "=== ✅ HEALTH CHECKS ==="
+                    echo "--- Container Status ---"
+                    cd app-infrastructure
+                    echo "Applications:"
+                    docker-compose -f docker-compose.apps.yml ps
+                    echo ""
+                    echo "Monitoring:"
+                    docker-compose -f docker-compose.monitoring.yml ps
+                    
+                    echo ""
+                    echo "--- Service Availability ---"
+                    curl -f http://localhost >/dev/null 2>&1 && echo "✅ WordPress HEALTHY" || echo "❌ WordPress DOWN"
+                    curl -f http://localhost:3000 >/dev/null 2>&1 && echo "✅ Grafana HEALTHY" || echo "❌ Grafana DOWN"
+                    curl -f http://localhost:9090 >/dev/null 2>&1 && echo "✅ Prometheus HEALTHY" || echo "❌ Prometheus DOWN"
+                    
+                    echo ""
+                    echo "--- Quick Access ---"
+                    echo "WordPress: http://localhost"
+                    echo "Grafana: http://localhost:3000 (admin/admin)"
+                    echo "Prometheus: http://localhost:9090"
+                    echo "Alertmanager: http://localhost:9093"
+                '''
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo "=== 📈 PIPELINE EXECUTION REPORT ==="
+            sh '''
+                echo "--- Final Status ---"
+                cd app-infrastructure
+                docker-compose -f docker-compose.apps.yml ps
+                docker-compose -f docker-compose.monitoring.yml ps
+                
+                echo ""
+                echo "--- Recent Logs ---"
+                docker-compose -f docker-compose.apps.yml logs --tail=3 2>/dev/null || echo "No apps logs"
+                docker-compose -f docker-compose.monitoring.yml logs --tail=3 2>/dev/null || echo "No monitoring logs"
+            '''
+        }
+        success {
+            echo "✅ 🎉 PIPELINE EXECUTED SUCCESSFULLY!"
+            echo "All services deployed and healthy"
+        }
+        failure {
+            echo "❌ PIPELINE FAILED"
+            echo "Check Docker logs and service availability"
+        }
+    }
+}

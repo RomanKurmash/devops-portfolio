@@ -1,19 +1,58 @@
 # Docker
-**/node_modules/
-**/__pycache__/
-*.log
+docker-compose.override.yml
+.dockerignore
 
-# SSL сертифікати
-ssl/*.key
-ssl/*.crt
-ssl/*.pem
-
-# Дані Grafana та Prometheus
-grafana/data/
-prometheus/data/
-
-# Службові файли Windows
+# Environment files
 .env
+.env.*
+!.env.example
+
+# Jenkins & SSH
+jenkins_agent_key*
+*.key
+*.pem
+id_rsa*
+id_dsa*
+
+# IDE
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# OS
+.DS_Store
 Thumbs.db
-Desktop.ini
+
+# Backup files
+*.bak
+*.backup
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Node.js
+node_modules/

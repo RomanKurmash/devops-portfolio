@@ -1,0 +1,24 @@
+version: '3.8'
+services:
+  # Jenkins CI Server
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+    networks:
+      - jenkins-net
+    restart: unless-stopped
+
+volumes:
+  jenkins_data:
+
+networks:
+  jenkins-net:
+    driver: bridge
