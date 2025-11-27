@@ -14,6 +14,7 @@ services:
       - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
     networks:
       - jenkins-net
+      - apps-net
     restart: unless-stopped
 
 volumes:
@@ -22,3 +23,5 @@ volumes:
 networks:
   jenkins-net:
     driver: bridge
+  apps-net:
+    external: true
