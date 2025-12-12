@@ -57,12 +57,16 @@ pipeline {
                     echo "=== INFRASTRUCTURE SETUP ==="
                     cd ${INFRA_DIR}
                     
-                    # ВИДАЛЕНО: docker network create ...
-                    # Ми більше не створюємо мережі вручну. 
-                    # Docker Compose створить їх сам автоматично.
-                    
+                    # --- ВИПРАВЛЕННЯ ПОМИЛКИ DOCKER ---
+                    # Якщо prometheus.yml існує як папка (через помилку монтування), видаляємо її
+                    if [ -d prometheus/prometheus.yml ]; then
+                        echo "Deleting directory 'prometheus.yml' created by Docker..."
+                        rm -rf prometheus/prometheus.yml
+                    fi
+                    # ----------------------------------
+
                     echo "Creating folders..."
-                    mkdir -p nginx/ssl mysql-exporter
+                    mkdir -p nginx/ssl mysql-exporter prometheus
                     
                     if [ -f mysql-exporter/my.cnf ]; then
                         echo "Configuring MySQL Exporter..."
