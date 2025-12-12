@@ -159,25 +159,32 @@ pipeline {
                     echo "=== HEALTH CHECKS ==="
                     cd ${INFRA_DIR}
                     
-                    check_service() {
-                        local service="\$1"
-                        local port="\$2"
-                        if timeout 5 bash -c "cat < /dev/null > /dev/tcp/127.0.0.1/\$port" 2>/dev/null; then
-                            echo "Service \$service (:\$port) - HEALTHY"
-                            return 0
+                    # Функція перевірки статусу контейнера
+                    check_container_status() {
+                        local name="\$1"
+                        # Використовуємо docker inspect, щоб перевірити, чи контейнер Running=true
+                        if [ "\$(docker inspect -f '{{.State.Running}}' \$name 2>/dev/null)" = "true" ]; then
+                            echo "✅ Container \$name is RUNNING"
                         else
-                            echo "Service \$service (:\$port) - NOT RESPONDING"
-                            return 1
+                            echo "❌ Container \$name is NOT RUNNING or missing"
+                            exit 1
                         fi
                     }
                     
-                    check_service "WordPress/Nginx" "80"
-                    check_service "Grafana" "3000" 
-                    check_service "Prometheus" "9090"
-                    check_service "Alertmanager" "9093"
+                    echo "--- Service Status Verification ---"
+                    check_container_status "nginx-proxy"
+                    check_container_status "wordpress-app"
+                    check_container_status "mysql-db"
+                    
+                    check_container_status "grafana"
+                    check_container_status "prometheus"
+                    check_container_status "alertmanager"
+                    check_container_status "telegram-bot"
                     
                     echo ""
-                    docker stats --no-stream --format "table {{.Name}}\\\\t{{.CPUPerc}}\\\\t{{.MemUsage}}" 2>/dev/null | head -10 || echo "Stats unavailable"
+                    echo "--- Resource Usage ---"
+                    # Виводимо статистику споживання ресурсів
+                    docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}" | head -15
                 """
             }
         }
