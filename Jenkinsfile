@@ -73,60 +73,42 @@ pipeline {
         }
         
         stage('4. Deploy Applications') {
-            steps {
-                sh """
-                    echo "=== DEPLOYING APPLICATIONS ==="
-                    cd ${INFRA_DIR}
-                    
-                    echo "Starting WordPress stack..."
-                    # Використовуємо build на етапі CI CD
-                    docker-compose -f docker-compose.apps.yml build --no-cache nginx
-                    docker-compose -f docker-compose.apps.yml up -d
-                    
-                    echo "Applications status:"
-                    docker-compose -f docker-compose.apps.yml ps
-                """
+    steps {
+        sh """
+            echo "=== DEPLOYING APPLICATIONS ==="
+            cd ${INFRA_DIR}
+            
+            echo "Starting WordPress stack..."
+            # Перезбираємо Nginx без кешу, щоб підтягнути нові конфіги
+            docker-compose -f docker-compose.apps.yml build --no-cache nginx
+            docker-compose -f docker-compose.apps.yml up -d
+            
+            echo "Applications status:"
+            docker-compose -f docker-compose.apps.yml ps
+        """
+        
+        script {
+            sh """
+                echo "Checking Nginx health..."
                 
-                // ОПТИМІЗАЦІЯ: Активне очікування замість sleep 45
-                script {
-                    sh """
-                        # Функція активного очікування через curl
-                        wait_for_http() {
-                            local service="\$1"
-                            local url="\$2"
-                            
-                            MAX_ATTEMPTS=20
-                            ATTEMPT=1
-                            
-                            while [ \$ATTEMPT -le \$MAX_ATTEMPTS ]; do
-                                # Перевірка з curl: -f (fail silently), -s (silent), -o (output to /dev/null), -m (max time)
-                                if curl -f -s -o /dev/null -m 5 \$url; then
-                                    echo "Service \$service is UP and responding (Attempt: \$ATTEMPT)"
-                                    return 0
-                                else
-                                    echo "Service \$service not ready, waiting 5 seconds (Attempt: \$ATTEMPT/\$MAX_ATTEMPTS)"
-                                    sleep 5
-                                    ATTEMPT=\$((ATTEMPT + 1))
-                                fi
-                            done
-                            
-                            echo "ERROR: Service \$service failed to start within the time limit!"
-                            exit 1
-                        }
-                        
-                        # Очікуємо на Nginx, який проксіює WordPress
-                        echo "Checking Nginx health..."
-                        sleep 10
-                        docker exec nginx-proxy wget --spider -q http://localhost || exit 1
-                    """
-                }
-
-                sh """
-                    echo "Recent logs (WordPress):"
-                    docker-compose -f docker-compose.apps.yml logs wordpress --tail=5 2>/dev/null || echo "No logs yet"
-                """
-            }
+                # Даємо час на ініціалізацію
+                sleep 10
+                
+                # Перевіряємо конфігурацію (про всяк випадок)
+                docker exec nginx-proxy nginx -t
+                
+                # FIX: Використовуємо 127.0.0.1 замість localhost, щоб Alpine не ломився через IPv6
+                docker exec nginx-proxy wget --spider -q http://127.0.0.1 || exit 1
+            """
         }
+
+        sh """
+            echo "Recent logs (WordPress):"
+            cd ${INFRA_DIR}
+            docker-compose -f docker-compose.apps.yml logs wordpress --tail=5 2>/dev/null || echo "No logs yet"
+        """
+    }
+}
         
         stage('5. Deploy Monitoring Stack') {
             steps {
