@@ -80,7 +80,8 @@ pipeline {
                     
                     echo "Starting WordPress stack..."
                     # Використовуємо build на етапі CI CD
-                    docker-compose -f docker-compose.apps.yml up -d --build
+                    sh 'docker-compose -f docker-compose.apps.yml build --no-cache nginx'
+                    sh 'docker-compose -f docker-compose.apps.yml up -d'
                     
                     echo "Applications status:"
                     docker-compose -f docker-compose.apps.yml ps
@@ -286,13 +287,15 @@ pipeline {
             echo "DEPLOYMENT FAILED"
             echo "Check the logs above for details"
             
-            sh """
-                echo "--- ERROR DIAGNOSTICS ---"
-                echo "Last container errors:"
-                cd ${INFRA_DIR}
-                docker-compose -f docker-compose.apps.yml logs --tail=20 2>/dev/null | grep -i "error\\\\|fail" | tail -5 || echo "No error logs"
-                docker-compose -f docker-compose.monitoring.yml logs --tail=20 2>/dev/null | grep -i "error\\\\|fail" | tail -5 || echo "No error logs"
-            """
+            sh '''
+                    echo "--- ERROR DIAGNOSTICS ---"
+                    cd app-infrastructure
+                    echo "LOGS FOR NGINX:"
+                    docker-compose -f docker-compose.apps.yml logs --tail=50 nginx
+
+                    echo "LOGS FOR WORDPRESS:"
+                    docker-compose -f docker-compose.apps.yml logs --tail=20 wordpress
+            '''
         }
         
         unstable {
