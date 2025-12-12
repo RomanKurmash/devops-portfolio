@@ -34,18 +34,22 @@ services:
 
   # Nginx Web Server
   nginx:
-    image: nginx:alpine
-    container_name: nginx-proxy
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./ssl:/etc/nginx/ssl:ro
-    networks:
-      - apps-net
-    restart: unless-stopped
+      build:
+        context: ./nginx      # Вказуємо на папку, де ми створили Dockerfile
+      container_name: nginx-proxy
+      ports:
+        - "80:80"
+        - "443:443"
+      volumes:
+        # Залишаємо тільки SSL, бо це папка (Docker з папками не помиляється так, як з файлами)
+        # Зверни увагу: я змінив шлях ./ssl на ./nginx/ssl, бо в логах ти створював папку там.
+        # Якщо сертифікати лежать просто в app-infrastructure/ssl, поверни ./ssl
+        - ./ssl:/etc/ssl:ro 
+      networks:
+        - apps-net
+      restart: unless-stopped
+      depends_on:
+        - wordpress
 
 volumes:
   mysql_data:
