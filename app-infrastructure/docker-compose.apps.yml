@@ -34,22 +34,22 @@ services:
 
   # Nginx Web Server
   nginx:
-      build:
-        context: ./nginx      # Вказуємо на папку, де ми створили Dockerfile
-      container_name: nginx-proxy
-      ports:
-        - "80:80"
-        - "443:443"
-      volumes:
-        # Залишаємо тільки SSL, бо це папка (Docker з папками не помиляється так, як з файлами)
-        # Зверни увагу: я змінив шлях ./ssl на ./nginx/ssl, бо в логах ти створював папку там.
-        # Якщо сертифікати лежать просто в app-infrastructure/ssl, поверни ./ssl
-        - ./ssl:/etc/ssl:ro 
-      networks:
-        - apps-net
-      restart: unless-stopped
-      depends_on:
-        - wordpress
+    build:
+      context: ./nginx
+    container_name: nginx-proxy
+    ports:
+      - "80:80"        # Залишаємо тільки 80 порт
+      # - "443:443"    <-- ЦЕ ВИДАЛИТИ
+    volumes:
+      # - ./ssl:/etc/nginx/ssl:ro  <-- ЦЕ ТЕЖ ВИДАЛИТИ
+      # Більше ніяких volumes для nginx не треба, бо ми скопіювали конфіги в Dockerfile
+      # Хіба що логи, якщо хочеш бачити їх на хості:
+      - ./nginx/logs:/var/log/nginx
+    networks:
+      - apps-net
+    restart: unless-stopped
+    depends_on:
+      - wordpress
 
 volumes:
   mysql_data:
