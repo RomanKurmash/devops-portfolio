@@ -37,33 +37,35 @@ pipeline {
                 sh """
                     echo "=== CLEANUP ==="
                     cd ${INFRA_DIR}
-                    # Зупиняємо старі контейнери
-                    docker-compose -f docker-compose.apps.yml down --remove-orphans 2>/dev/null || echo "No previous apps stack found"
-                    docker-compose -f docker-compose.monitoring.yml down --remove-orphans 2>/dev/null || echo "No previous monitoring stack found"
-                    # Очищаємо непотрібні образи
-                    docker image prune -f 2>/dev/null || true
+                    
+                    # Зупиняємо контейнери
+                    docker-compose -f docker-compose.apps.yml down --remove-orphans || true
+                    docker-compose -f docker-compose.monitoring.yml down --remove-orphans || true
+                    
+                    # !ВАЖЛИВО: Видаляємо старі мережі, які ми створили вручну, щоб вони не заважали
+                    docker network rm devops-portfolio_apps-net || true
+                    docker network rm devops-portfolio_monitor-net || true
+                    
+                    docker image prune -f
                 """
             }
         }
-        
+
         stage('3. Prepare Infrastructure') {
             steps {
                 sh """
                     echo "=== INFRASTRUCTURE SETUP ==="
                     cd ${INFRA_DIR}
                     
-                    # Створюємо мережі
-                    echo "Creating networks..."
-                    docker network create ${COMPOSE_PROJECT_NAME}_apps-net 2>/dev/null || echo "Apps network exists"
-                    docker network create ${COMPOSE_PROJECT_NAME}_monitor-net 2>/dev/null || echo "Monitor network exists"
+                    # ВИДАЛЕНО: docker network create ...
+                    # Ми більше не створюємо мережі вручну. 
+                    # Docker Compose створить їх сам автоматично.
                     
-                    # Створюємо необхідні директорії
+                    echo "Creating folders..."
                     mkdir -p nginx/ssl mysql-exporter
                     
-                    # Фікс MySQL Exporter конфігурації
-                    if [ -f "mysql-exporter/my.cnf" ]; then
+                    if [ -f mysql-exporter/my.cnf ]; then
                         echo "Configuring MySQL Exporter..."
-                        # Виправлення проблеми з невидимими символами на початку файлу
                         sed -i '1s/^[^a-zA-Z[]*//' mysql-exporter/my.cnf
                     fi
                     
