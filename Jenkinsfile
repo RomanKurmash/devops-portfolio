@@ -126,6 +126,7 @@ pipeline {
                     cd ${INFRA_DIR}
                     
                     echo "Starting monitoring services..."
+                    # Додаємо --build, щоб точно перезібрався бот
                     docker-compose -f docker-compose.monitoring.yml up -d --build
                     
                     echo "Monitoring status:"
@@ -134,34 +135,20 @@ pipeline {
                 
                 script {
                     sh """
-                        wait_for_http() {
-                            local service="\$1"
-                            local url="\$2"
-                            MAX_ATTEMPTS=20
-                            ATTEMPT=1
-                            while [ \$ATTEMPT -le \$MAX_ATTEMPTS ]; do
-                                if curl -f -s -o /dev/null -m 5 \$url; then
-                                    echo "Service \$service is UP (Attempt: \$ATTEMPT)"
-                                    return 0
-                                else
-                                    echo "Waiting for \$service... (\$ATTEMPT/\$MAX_ATTEMPTS)"
-                                    sleep 5
-                                    ATTEMPT=\$((ATTEMPT + 1))
-                                fi
-                            done
-                            echo "ERROR: Service \$service failed to start!"
-                            exit 1
-                        }
-
-                        wait_for_http "Grafana" "http://127.0.0.1:3000"
-                        wait_for_http "Prometheus" "http://127.0.0.1:9090"
+                        echo "Checking Grafana readiness via logs..."
+                        # Чекаємо до 60 секунд, поки в логах не з'явиться повідомлення про успішний старт HTTP сервера
+                        timeout 60s bash -c 'until docker logs grafana 2>&1 | grep -q "HTTP Server Listen"; do echo "Waiting for Grafana..."; sleep 2; done'
+                        
+                        echo "Checking Prometheus readiness via logs..."
+                        timeout 60s bash -c 'until docker logs prometheus 2>&1 | grep -q "Server is ready to receive web requests"; do echo "Waiting for Prometheus..."; sleep 2; done'
+                        
+                        echo "✅ Monitoring services are up!"
                     """
                 }
 
                 sh """
-                    echo "Monitoring logs:"
-                    cd ${INFRA_DIR}
-                    docker-compose -f docker-compose.monitoring.yml logs prometheus --tail=5 2>/dev/null || echo "No logs yet"
+                    echo "Monitoring logs snippet:"
+                    docker logs grafana --tail 5
                 """
             }
         }
