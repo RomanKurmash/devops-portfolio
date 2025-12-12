@@ -57,16 +57,23 @@ pipeline {
                     echo "=== INFRASTRUCTURE SETUP ==="
                     cd ${INFRA_DIR}
                     
-                    # --- ВИПРАВЛЕННЯ ПОМИЛКИ DOCKER ---
-                    # Якщо prometheus.yml існує як папка (через помилку монтування), видаляємо її
+                    # --- CLEANUP DOCKER MISTAKES ---
+                    # Видаляємо папки, які Docker створив замість файлів
+                    
                     if [ -d prometheus/prometheus.yml ]; then
-                        echo "Deleting directory 'prometheus.yml' created by Docker..."
+                        echo "Fixing prometheus.yml directory..."
                         rm -rf prometheus/prometheus.yml
                     fi
-                    # ----------------------------------
+                    
+                    if [ -d alertmanager/alertmanager.yml ]; then
+                        echo "Fixing alertmanager.yml directory..."
+                        rm -rf alertmanager/alertmanager.yml
+                    fi
+                    # -------------------------------
 
                     echo "Creating folders..."
-                    mkdir -p nginx/ssl mysql-exporter prometheus
+                    # Додаємо alertmanager у список папок
+                    mkdir -p nginx/ssl mysql-exporter prometheus alertmanager
                     
                     if [ -f mysql-exporter/my.cnf ]; then
                         echo "Configuring MySQL Exporter..."
