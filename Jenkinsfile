@@ -12,51 +12,21 @@ pipeline {
         INFRA_DIR = 'app-infrastructure'
     }
 
-    // =======================================================================
-    // КОРИСНІ ФУНКЦІЇ BASH (Для активного очікування)
-    // =======================================================================
-    def wait_for_http = { serviceName, url, port ->
-        sh """
-            echo "⏳ Waiting for \$serviceName (Port:\$port) at \$url..."
-            
-            MAX_ATTEMPTS=20
-            ATTEMPT=1
-            
-            while [ \$ATTEMPT -le \$MAX_ATTEMPTS ]; do
-                # Перевірка з curl: -f (fail silently), -s (silent), -o (output to /dev/null), -m (max time)
-                if curl -f -s -o /dev/null -m 5 \$url; then
-                    echo "✅ \$serviceName is UP and responding (Attempt: \$ATTEMPT)"
-                    return 0
-                else
-                    echo "💤 \$serviceName not ready, waiting 5 seconds (Attempt: \$ATTEMPT/\$MAX_ATTEMPTS)"
-                    sleep 5
-                    ATTEMPT=\$((ATTEMPT + 1))
-                fi
-            done
-            
-            echo "❌ ERROR: \$serviceName failed to start within the time limit!"
-            exit 1
-        """
-    }
-
-    // =======================================================================
-    // ЕТАПИ
-    // =======================================================================
     stages {
         stage('1. Checkout & Environment') {
             steps {
-                echo '🚀 DevOps Portfolio CI/CD Pipeline'
+                echo 'DevOps Portfolio CI/CD Pipeline'
                 checkout scm
                 
                 sh """
-                    echo "=== 🖥️ ENVIRONMENT ==="
-                    echo "Build: #${env.BUILD_NUMBER}" // ВИПРАВЛЕННЯ: Використовуємо ${env.BUILD_NUMBER}
+                    echo "=== ENVIRONMENT ==="
+                    echo "Build: #${env.BUILD_NUMBER}"
                     echo "OS: \$(uname -a)"
                     echo "Workspace: \$(pwd)"
-                    echo "=== 🐳 DOCKER ==="
+                    echo "=== DOCKER ==="
                     docker --version
                     docker-compose --version
-                    echo "=== 📁 STRUCTURE ==="
+                    echo "=== STRUCTURE ==="
                     find . -name "docker-compose*.yml" | head -10
                 """
             }
@@ -65,7 +35,7 @@ pipeline {
         stage('2. Cleanup Previous') {
             steps {
                 sh """
-                    echo "=== 🧹 CLEANUP ==="
+                    echo "=== CLEANUP ==="
                     cd ${INFRA_DIR}
                     # Зупиняємо старі контейнери
                     docker-compose -f docker-compose.apps.yml down --remove-orphans 2>/dev/null || echo "No previous apps stack found"
@@ -79,11 +49,11 @@ pipeline {
         stage('3. Prepare Infrastructure') {
             steps {
                 sh """
-                    echo "=== 🔧 INFRASTRUCTURE SETUP ==="
+                    echo "=== INFRASTRUCTURE SETUP ==="
                     cd ${INFRA_DIR}
                     
-                    # Створюємо мережі (використовуємо змінні Groovy всередині Bash через ${...})
-                    echo "📡 Creating networks..."
+                    # Створюємо мережі
+                    echo "Creating networks..."
                     docker network create ${COMPOSE_PROJECT_NAME}_apps-net 2>/dev/null || echo "Apps network exists"
                     docker network create ${COMPOSE_PROJECT_NAME}_monitor-net 2>/dev/null || echo "Monitor network exists"
                     
@@ -92,12 +62,12 @@ pipeline {
                     
                     # Фікс MySQL Exporter конфігурації
                     if [ -f "mysql-exporter/my.cnf" ]; then
-                        echo "⚙️ Configuring MySQL Exporter..."
-                        # Використовуємо екранування \` для sed, щоб не було проблем з Groovy
+                        echo "Configuring MySQL Exporter..."
+                        # Виправлення проблеми з невидимими символами на початку файлу
                         sed -i '1s/^[^a-zA-Z[]*//' mysql-exporter/my.cnf
                     fi
                     
-                    echo "✅ Infrastructure ready"
+                    echo "Infrastructure ready"
                 """
             }
         }
@@ -105,24 +75,51 @@ pipeline {
         stage('4. Deploy Applications') {
             steps {
                 sh """
-                    echo "=== 🚀 DEPLOYING APPLICATIONS ==="
+                    echo "=== DEPLOYING APPLICATIONS ==="
                     cd ${INFRA_DIR}
                     
-                    echo "📦 Starting WordPress stack..."
-                    # Використовуємо --build на етапі CI/CD, щоб завжди мати свіжий образ
+                    echo "Starting WordPress stack..."
+                    # Використовуємо build на етапі CI CD
                     docker-compose -f docker-compose.apps.yml up -d --build
                     
-                    echo "🔍 Applications status:"
+                    echo "Applications status:"
                     docker-compose -f docker-compose.apps.yml ps
                 """
                 
                 // ОПТИМІЗАЦІЯ: Активне очікування замість sleep 45
                 script {
-                    wait_for_http("WordPress/Nginx", "http://127.0.0.1", 80)
+                    sh """
+                        # Функція активного очікування через curl
+                        wait_for_http() {
+                            local service="\$1"
+                            local url="\$2"
+                            
+                            MAX_ATTEMPTS=20
+                            ATTEMPT=1
+                            
+                            while [ \$ATTEMPT -le \$MAX_ATTEMPTS ]; do
+                                # Перевірка з curl: -f (fail silently), -s (silent), -o (output to /dev/null), -m (max time)
+                                if curl -f -s -o /dev/null -m 5 \$url; then
+                                    echo "Service \$service is UP and responding (Attempt: \$ATTEMPT)"
+                                    return 0
+                                else
+                                    echo "Service \$service not ready, waiting 5 seconds (Attempt: \$ATTEMPT/\$MAX_ATTEMPTS)"
+                                    sleep 5
+                                    ATTEMPT=\$((ATTEMPT + 1))
+                                fi
+                            done
+                            
+                            echo "ERROR: Service \$service failed to start within the time limit!"
+                            exit 1
+                        }
+                        
+                        # Очікуємо на Nginx, який проксіює WordPress
+                        wait_for_http "WordPress/Nginx" "http://127.0.0.1"
+                    """
                 }
 
                 sh """
-                    echo "📝 Recent logs (WordPress):"
+                    echo "Recent logs (WordPress):"
                     docker-compose -f docker-compose.apps.yml logs wordpress --tail=5 2>/dev/null || echo "No logs yet"
                 """
             }
@@ -131,26 +128,50 @@ pipeline {
         stage('5. Deploy Monitoring Stack') {
             steps {
                 sh """
-                    echo "=== 📊 DEPLOYING MONITORING ==="
+                    echo "=== DEPLOYING MONITORING ==="
                     cd ${INFRA_DIR}
                     
-                    echo "📈 Starting monitoring services..."
+                    echo "Starting monitoring services..."
                     docker-compose -f docker-compose.monitoring.yml up -d --build
                     
-                    echo "🔍 Monitoring status:"
+                    echo "Monitoring status:"
                     docker-compose -f docker-compose.monitoring.yml ps
                 """
                 
                 // ОПТИМІЗАЦІЯ: Активне очікування замість sleep 30
                 script {
-                    // Очікуємо на Grafana
-                    wait_for_http("Grafana", "http://127.0.0.1:3000", 3000)
-                    // Очікуємо на Prometheus
-                    wait_for_http("Prometheus", "http://127.0.0.1:9090", 9090)
+                    sh """
+                        # Функція активного очікування (дублюємо, щоб бути впевненими, що вона доступна)
+                        wait_for_http() {
+                            local service="\$1"
+                            local url="\$2"
+                            
+                            MAX_ATTEMPTS=20
+                            ATTEMPT=1
+                            
+                            while [ \$ATTEMPT -le \$MAX_ATTEMPTS ]; do
+                                if curl -f -s -o /dev/null -m 5 \$url; then
+                                    echo "Service \$service is UP and responding (Attempt: \$ATTEMPT)"
+                                    return 0
+                                else
+                                    echo "Service \$service not ready, waiting 5 seconds (Attempt: \$ATTEMPT/\$MAX_ATTEMPTS)"
+                                    sleep 5
+                                    ATTEMPT=\$((ATTEMPT + 1))
+                                fi
+                            done
+                            
+                            echo "ERROR: Service \$service failed to start within the time limit!"
+                            exit 1
+                        }
+
+                        # Очікуємо на Grafana та Prometheus
+                        wait_for_http "Grafana" "http://127.0.0.1:3000"
+                        wait_for_http "Prometheus" "http://127.0.0.1:9090"
+                    """
                 }
 
                 sh """
-                    echo "📝 Monitoring logs:"
+                    echo "Monitoring logs:"
                     docker-compose -f docker-compose.monitoring.yml logs prometheus --tail=5 2>/dev/null || echo "No logs yet"
                 """
             }
@@ -159,20 +180,20 @@ pipeline {
         stage('6. Health Checks & Validation') {
             steps {
                 sh """
-                    echo "=== ✅ HEALTH CHECKS ==="
+                    echo "=== HEALTH CHECKS ==="
                     cd ${INFRA_DIR}
                     
-                    # Функція перевірки сервісів (використовуємо $1, $2, екрановані Groovy \$, і timeout)
+                    # Функція перевірки сервісів
                     check_service() {
                         local service="\$1"
                         local port="\$2"
                         local timeout=5
                         
                         if timeout \$timeout bash -c "cat < /dev/null > /dev/tcp/127.0.0.1/\$port" 2>/dev/null; then
-                            echo "✅ \$service (port:\$port) - HEALTHY"
+                            echo "Service \$service (port:\$port) - HEALTHY"
                             return 0
                         else
-                            echo "⚠️ \$service (port:\$port) - NOT RESPONDING (TCP check failed)"
+                            echo "Service \$service (port:\$port) - NOT RESPONDING (TCP check failed)"
                             return 1
                         fi
                     }
@@ -185,7 +206,6 @@ pipeline {
                     
                     echo ""
                     echo "--- Container Status ---"
-                    # ... (інші перевірки без змін)
                     docker-compose -f docker-compose.apps.yml ps -a
                     echo ""
                     docker-compose -f docker-compose.monitoring.yml ps -a
@@ -200,30 +220,38 @@ pipeline {
         stage('7. Generate Report') {
             steps {
                 sh """
-                    echo "=== 📋 DEPLOYMENT REPORT ==="
+                    echo "=== DEPLOYMENT REPORT ==="
                     
-                    echo "📊 FINAL STATUS"
-                    echo "Build: #${env.BUILD_NUMBER}" // Виправлено: Використання env.BUILD_NUMBER
+                    echo "FINAL STATUS"
+                    echo "Build: #${env.BUILD_NUMBER}"
                     echo "Timestamp: \$(date '+%Y-%m-%d %H:%M:%S')"
                     
                     cd ${INFRA_DIR}
                     echo ""
-                    echo "🏗️ DEPLOYED SERVICES:"
-                    # Екранування змінної Bash в Groovy: \$service перетворено на \\\$service
+                    echo "DEPLOYED SERVICES:"
                     docker-compose -f docker-compose.apps.yml config --services | while read service; do
-                        echo "  • \\\$service" 
+                        echo "  • \\\$service" 
                     done
                     
                     echo ""
-                    echo "📈 MONITORING SERVICES:"
+                    echo "MONITORING SERVICES:"
                     docker-compose -f docker-compose.monitoring.yml config --services | while read service; do
-                        echo "  • \\\$service"
+                        echo "  • \\\$service"
                     done
                     
                     echo ""
-                    echo "🌐 ACCESS ENDPOINTS:"
-                    echo "  WordPress:     http://localhost"
-                    // ... (інші ендпоінти без змін)
+                    echo "ACCESS ENDPOINTS:"
+                    echo "  WordPress:     http://localhost"
+                    echo "  Grafana:       http://localhost:3000"
+                    echo "  Prometheus:    http://localhost:9090"
+                    echo "  Alertmanager:  http://localhost:9093"
+                    echo "  Jenkins:       http://localhost:8080"
+                    
+                    echo ""
+                    echo "MAINTENANCE COMMANDS:"
+                    echo "  View logs:     cd ${INFRA_DIR} && docker-compose logs -f"
+                    echo "  Stop all:      cd ${INFRA_DIR} && docker-compose -f docker-compose.apps.yml down && docker-compose -f docker-compose.monitoring.yml down"
+                    echo "  Restart:       cd ${INFRA_DIR} && docker-compose restart"
                 """
                 
                 // Збереження артефакту звіту
@@ -238,32 +266,40 @@ pipeline {
         }
     }
     
-    // =======================================================================
-    // ПОСТ-ОБРОБКА
-    // =======================================================================
     post {
         always {
-            echo "=== 🏁 PIPELINE EXECUTION COMPLETE ==="
+            echo "=== PIPELINE EXECUTION COMPLETE ==="
             sh """
-                echo "⏱️ Duration: ${currentBuild.durationString}"
-                echo "📊 Result: ${currentBuild.currentResult}"
+                echo "Duration: ${currentBuild.durationString}"
+                echo "Result: ${currentBuild.currentResult}"
             """
         }
         
-        // ... (success, failure, unstable, cleanup без змін)
+        success {
+            echo "DEPLOYMENT SUCCESSFUL"
+            echo "All services are deployed and running"
+        }
         
         failure {
-            echo "❌ DEPLOYMENT FAILED"
+            echo "DEPLOYMENT FAILED"
             echo "Check the logs above for details"
             
             sh """
                 echo "--- ERROR DIAGNOSTICS ---"
                 echo "Last container errors:"
                 cd ${INFRA_DIR}
-                # Використовуємо екранування \\\\ для grep, щоб не було проблем з Groovy
                 docker-compose -f docker-compose.apps.yml logs --tail=20 2>/dev/null | grep -i "error\\\\|fail" | tail -5 || echo "No error logs"
                 docker-compose -f docker-compose.monitoring.yml logs --tail=20 2>/dev/null | grep -i "error\\\\|fail" | tail -5 || echo "No error logs"
             """
+        }
+        
+        unstable {
+            echo "DEPLOYMENT WITH WARNINGS"
+            echo "Some services may not be fully healthy"
+        }
+        
+        cleanup {
+            echo "Cleanup completed"
         }
     }
 }
