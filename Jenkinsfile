@@ -114,7 +114,9 @@ pipeline {
                         }
                         
                         # Очікуємо на Nginx, який проксіює WordPress
-                        wait_for_http "WordPress/Nginx" "http://127.0.0.1"
+                        echo "Checking Nginx health..."
+                        sleep 10
+                        docker exec nginx-proxy wget --spider -q http://localhost || exit 1
                     """
                 }
 
