@@ -1,11 +1,17 @@
 version: '3.8'
+
 services:
   # MySQL Exporter 
+  # FIX: Використовуємо build, щоб запекти my.cnf всередину
   mysql-exporter:
-    image: prom/mysqld-exporter:latest
+    build:
+      context: ./mysql-exporter
     container_name: mysql-exporter
-    volumes:
-      - ./mysql-exporter/my.cnf:/.my.cnf:ro 
+    # volumes прибрано, бо конфіг вже всередині образу
+    environment:
+      DATA_SOURCE_NAME: "client:password@tcp(mysql:3306)/"
+    command:
+      - '--config.my-cnf=/.my.cnf'
     networks:
       - monitor-net
       - apps-net
@@ -40,14 +46,15 @@ services:
     restart: unless-stopped
 
   # Prometheus Server
+  # FIX: Використовуємо build, щоб запекти prometheus.yml та alerts.yml
   prometheus:
-    image: prom/prometheus:latest
+    build:
+      context: ./prometheus
     container_name: prometheus
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
+      # Монтуємо тільки дані, конфіги вже в образі
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -67,6 +74,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
+      # Папки монтуються нормально, проблема була тільки з окремими файлами
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/dashboards:/var/lib/grafana/dashboards
       - grafana_data:/var/lib/grafana
@@ -78,13 +86,14 @@ services:
     restart: unless-stopped
 
   # Alertmanager
+  # FIX: Використовуємо build, щоб запекти alertmanager.yml
   alertmanager:
-    image: prom/alertmanager:latest
+    build:
+      context: ./alertmanager
     container_name: alertmanager
     ports:
       - "9093:9093"
-    volumes:
-      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    # volumes прибрано
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--storage.path=/alertmanager'
@@ -99,6 +108,7 @@ services:
     volumes:
       - ./telegram-bot:/app
     working_dir: /app
+    # Тут залишаємо як є, папки зазвичай не ламають CI
     command: sh -c "pip install flask requests && python bot.py"
     networks:
       - monitor-net
