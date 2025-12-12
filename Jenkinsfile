@@ -80,8 +80,8 @@ pipeline {
                     
                     echo "Starting WordPress stack..."
                     # Використовуємо build на етапі CI CD
-                    sh 'docker-compose -f docker-compose.apps.yml build --no-cache nginx'
-                    sh 'docker-compose -f docker-compose.apps.yml up -d'
+                    docker-compose -f docker-compose.apps.yml build --no-cache nginx
+                    docker-compose -f docker-compose.apps.yml up -d
                     
                     echo "Applications status:"
                     docker-compose -f docker-compose.apps.yml ps
