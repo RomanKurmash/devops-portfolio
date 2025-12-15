@@ -1,7 +1,8 @@
 version: '3.8'
+
 services:
-  # MySQL Database
-  mysql:
+  # 1. MySQL Database
+  mysql-db:
     image: mysql:8.0
     container_name: mysql-db
     environment:
@@ -10,50 +11,77 @@ services:
       MYSQL_USER: wpuser
       MYSQL_PASSWORD: wppassword
     volumes:
-      - mysql_data:/var/lib/mysql
+      - db_data:/var/lib/mysql
     networks:
       - apps-net
     restart: unless-stopped
 
-  # WordPress
-  wordpress:
+  # 2. WordPress
+  wordpress-app:
     image: wordpress:latest
     container_name: wordpress-app
+    depends_on:
+      - mysql-db
     environment:
-      WORDPRESS_DB_HOST: mysql
+      WORDPRESS_DB_HOST: mysql-db:3306
       WORDPRESS_DB_USER: wpuser
       WORDPRESS_DB_PASSWORD: wppassword
       WORDPRESS_DB_NAME: wordpress
+      # === НАЛАШТУВАННЯ ДОМЕНУ ===
+      # Коли купиш домен, розкоментуй ці 3 рядки і впиши свій домен:
+      # VIRTUAL_HOST: mysite.tech, www.mysite.tech
+      # LETSENCRYPT_HOST: mysite.tech, www.mysite.tech
+      # LETSENCRYPT_EMAIL: your-email@gmail.com
     volumes:
       - wp_data:/var/www/html
-    depends_on:
-      - mysql
     networks:
       - apps-net
     restart: unless-stopped
 
-  # Nginx Web Server
-  nginx:
-    build:
-      context: ./nginx
+  # 3. Nginx Reverse Proxy (Заміна твого старого nginx)
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy:alpine
     container_name: nginx-proxy
     ports:
-      - "80:80"        # Залишаємо тільки 80 порт
-      # - "443:443"    <-- ЦЕ ВИДАЛИТИ
+      - "80:80"
+      - "443:443"
+    environment:
+      # Ця магія дозволяє заходити по IP, поки немає домену!
+      - DEFAULT_HOST=wordpress-app
     volumes:
-      # - ./ssl:/etc/nginx/ssl:ro  <-- ЦЕ ТЕЖ ВИДАЛИТИ
-      # Більше ніяких volumes для nginx не треба, бо ми скопіювали конфіги в Dockerfile
-      # Хіба що логи, якщо хочеш бачити їх на хості:
-      - ./nginx/logs:/var/log/nginx
+      - conf:/etc/nginx/conf.d
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - certs:/etc/nginx/certs:ro
+      - /var/run/docker.sock:/tmp/docker.sock:ro # Слухаємо Docker події
     networks:
       - apps-net
     restart: unless-stopped
+
+  # 4. SSL Companion (Автоматизація HTTPS)
+  acme-companion:
+    image: nginxproxy/acme-companion
+    container_name: acme-companion
+    volumes_from:
+      - nginx-proxy
+    volumes:
+      - certs:/etc/nginx/certs:rw
+      - acme:/etc/acme.sh
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - apps-net
     depends_on:
-      - wordpress
+      - nginx-proxy
+    restart: unless-stopped
 
 volumes:
-  mysql_data:
+  db_data:
   wp_data:
+  conf:
+  vhost:
+  html:
+  certs:
+  acme:
 
 networks:
   apps-net:
