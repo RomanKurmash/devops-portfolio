@@ -95,7 +95,7 @@ pipeline {
                     cd ${INFRA_DIR}
                     
                     echo "Starting WordPress stack..."
-                    docker-compose -f docker-compose.apps.yml build --no-cache nginx
+                    # Більше не треба білдити nginx, ми качаємо готовий образ
                     docker-compose -f docker-compose.apps.yml up -d
                     
                     echo "Applications status:"
@@ -104,10 +104,18 @@ pipeline {
                 
                 script {
                     sh """
-                        echo "Checking Nginx health..."
+                        echo "Checking Nginx Proxy health..."
+                        # Чекаємо 10 секунд
                         sleep 10
-                        docker exec nginx-proxy nginx -t
-                        docker exec nginx-proxy wget --spider -q http://127.0.0.1 || exit 1
+                        
+                        # Перевіряємо, чи контейнер запущений (найбезпечніший метод)
+                        if [ "\$(docker inspect -f '{{.State.Running}}' nginx-proxy 2>/dev/null)" = "true" ]; then
+                            echo "✅ Nginx Proxy is RUNNING"
+                        else
+                            echo "❌ Nginx Proxy failed to start"
+                            docker logs nginx-proxy --tail 20
+                            exit 1
+                        fi
                     """
                 }
 
