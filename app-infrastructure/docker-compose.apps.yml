@@ -29,7 +29,7 @@ services:
       WORDPRESS_DB_NAME: wordpress
       # === НАЛАШТУВАННЯ ДОМЕНУ ===
       # Коли купиш домен, розкоментуй ці 3 рядки і впиши свій домен:
-      # VIRTUAL_HOST: mysite.tech, www.mysite.tech
+      VIRTUAL_HOST: localhost
       # LETSENCRYPT_HOST: mysite.tech, www.mysite.tech
       # LETSENCRYPT_EMAIL: your-email@gmail.com
     volumes:
