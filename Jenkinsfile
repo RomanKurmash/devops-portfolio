@@ -37,8 +37,8 @@ pipeline {
                     cd ${INFRA_DIR}
                     
                     # Зупиняємо контейнери БЕЗ видалення вольюмів (щоб дані WP лишилися)
-                    docker-compose -f docker-compose.apps.yml down --remove-orphans || true
-                    docker-compose -f docker-compose.monitoring.yml down --remove-orphans || true
+                    docker compose -f docker-compose.apps.yml down --remove-orphans || true
+                    docker compose -f docker-compose.monitoring.yml down --remove-orphans || true
                     
                     # Чистимо тільки "сміття" (невикористовувані образи)
                     docker image prune -f
@@ -53,10 +53,10 @@ pipeline {
                     cd ${INFRA_DIR}
                     
                     # Запуск Додатків
-                    docker-compose -f docker-compose.apps.yml up -d
+                    docker compose -f docker-compose.apps.yml up -d
                     
                     # Запуск Моніторингу з перезбіркою бота
-                    docker-compose -f docker-compose.monitoring.yml up -d --build
+                    docker compose -f docker-compose.monitoring.yml up -d --build
                 """
             }
         }
