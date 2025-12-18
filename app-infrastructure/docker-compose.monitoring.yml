@@ -69,6 +69,7 @@ services:
       - '--web.enable-lifecycle'
     networks:
       - monitor-net
+      - apps-net
     restart: unless-stopped
 
   # Grafana Server
@@ -110,6 +111,7 @@ services:
     container_name: telegram-bot
     networks:
       - monitor-net
+      - apps-net
     restart: unless-stopped
 
 volumes:
