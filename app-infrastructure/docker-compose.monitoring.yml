@@ -1,15 +1,20 @@
 version: '3.8'
 
 services:
-  # MySQL Exporter (Build Fix)
+  # MySQL Exporter
   mysql-exporter:
     build:
       context: ./mysql-exporter
     container_name: mysql-exporter
     environment:
-      DATA_SOURCE_NAME: "client:password@tcp(mysql:3306)/"
+      # Формуємо рядок підключення, використовуючи змінні з .env
+      DATA_SOURCE_NAME: "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(mysql-db:3306)/"
     command:
-      - '--config.my-cnf=/.my.cnf'
+      # Важливо: ми використовуємо змінну оточення замість файлу .my.cnf для простоти
+      - '--collect.global_status'
+      - '--collect.info_schema.innodb_cmp'
+      - '--collect.info_schema.innodb_cmpmem'
+      - '--collect.info_schema.query_response_time'
     networks:
       - monitor-net
       - apps-net
@@ -20,7 +25,7 @@ services:
     image: nginx/nginx-prometheus-exporter:latest
     container_name: nginx-exporter
     command:
-      - '-nginx.scrape-uri=http://nginx:80/nginx_status'
+      - '-nginx.scrape-uri=http://nginx-proxy:80/nginx_status'
     networks:
       - monitor-net
       - apps-net
@@ -43,7 +48,7 @@ services:
       - monitor-net
     restart: unless-stopped
 
-  # Prometheus Server (Build Fix)
+  # Prometheus Server
   prometheus:
     build:
       context: ./prometheus
@@ -70,19 +75,18 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      # Папки зазвичай монтуються ок, проблеми були з окремими файлами. 
-      # Якщо і це впаде - доведеться робити Dockerfile і для Grafana.
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/dashboards:/var/lib/grafana/dashboards
       - grafana_data:/var/lib/grafana
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      # Беремо пароль з .env
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
     networks:
       - monitor-net
     restart: unless-stopped
 
-  # Alertmanager (Build Fix)
+  # Alertmanager
   alertmanager:
     build:
       context: ./alertmanager
@@ -96,12 +100,11 @@ services:
       - monitor-net
     restart: unless-stopped
 
-  # Telegram Bot (Build Fix - виправлено!)
+  # Telegram Bot
   telegram-bot:
     build: 
       context: ./telegram-bot
     container_name: telegram-bot
-    # volumes прибрано, код тепер всередині образу
     networks:
       - monitor-net
     restart: unless-stopped
@@ -115,3 +118,4 @@ networks:
     driver: bridge
   apps-net:
     external: true
+    name: apps-net

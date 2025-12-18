@@ -15,11 +15,21 @@ pipeline {
     stages {
         stage('1. Checkout & Environment') {
             steps {
-                // 1. ОЧИЩЕННЯ: Видаляємо все старе сміття (в т.ч. помилкові папки Docker)
                 cleanWs()
-                
                 echo 'DevOps Portfolio CI/CD Pipeline'
                 checkout scm
+                
+                // === МАГІЯ ТУТ ===
+                // Ми дістаємо секретний файл з Jenkins і кладемо його як .env
+                withCredentials([file(credentialsId: 'devops-portfolio-env', variable: 'ENV_FILE')]) {
+                    sh """
+                        # Копіюємо секретний файл у потрібне місце
+                        cp \$ENV_FILE ${INFRA_DIR}/.env
+                        
+                        echo "✅ .env file injected successfully"
+                    """
+                }
+                // =================
                 
                 sh """
                     echo "=== ENVIRONMENT ==="
@@ -29,10 +39,8 @@ pipeline {
                     docker --version
                     docker-compose --version
                     
-                    # Перевіряємо, чи Git справді стягнув файли конфігів
-                    echo "=== CONFIG CHECK ==="
-                    ls -la ${INFRA_DIR}/prometheus/ || echo "Prometheus folder missing"
-                    ls -la ${INFRA_DIR}/alertmanager/ || echo "Alertmanager folder missing"
+                    # Перевіряємо, чи файл на місці (не показуючи вміст!)
+                    ls -la ${INFRA_DIR}/.env
                 """
             }
         }

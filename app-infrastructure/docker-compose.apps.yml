@@ -6,10 +6,10 @@ services:
     image: mysql:8.0
     container_name: mysql-db
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: wordpress
-      MYSQL_USER: wpuser
-      MYSQL_PASSWORD: wppassword
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
     networks:
@@ -24,21 +24,20 @@ services:
       - mysql-db
     environment:
       WORDPRESS_DB_HOST: mysql-db:3306
-      WORDPRESS_DB_USER: wpuser
-      WORDPRESS_DB_PASSWORD: wppassword
-      WORDPRESS_DB_NAME: wordpress
-      # === НАЛАШТУВАННЯ ДОМЕНУ ===
-      # Коли купиш домен, розкоментуй ці 3 рядки і впиши свій домен:
-      VIRTUAL_HOST: localhost
-      # LETSENCRYPT_HOST: mysite.tech, www.mysite.tech
-      # LETSENCRYPT_EMAIL: your-email@gmail.com
+      WORDPRESS_DB_USER: ${MYSQL_USER}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE}
+      # Використовуємо змінну DOMAIN_NAME. Поки там "localhost", це спрацює для VIRTUAL_HOST
+      VIRTUAL_HOST: ${DOMAIN_NAME}
+      # LETSENCRYPT_HOST: ${DOMAIN_NAME}
+      # LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
     volumes:
       - wp_data:/var/www/html
     networks:
       - apps-net
     restart: unless-stopped
 
-  # 3. Nginx Reverse Proxy (Заміна твого старого nginx)
+  # 3. Nginx Reverse Proxy
   nginx-proxy:
     image: nginxproxy/nginx-proxy:alpine
     container_name: nginx-proxy
@@ -46,19 +45,18 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      # Ця магія дозволяє заходити по IP, поки немає домену!
       - DEFAULT_HOST=wordpress-app
     volumes:
       - conf:/etc/nginx/conf.d
       - vhost:/etc/nginx/vhost.d
       - html:/usr/share/nginx/html
       - certs:/etc/nginx/certs:ro
-      - /var/run/docker.sock:/tmp/docker.sock:ro # Слухаємо Docker події
+      - /var/run/docker.sock:/tmp/docker.sock:ro
     networks:
       - apps-net
     restart: unless-stopped
 
-  # 4. SSL Companion (Автоматизація HTTPS)
+  # 4. SSL Companion
   acme-companion:
     image: nginxproxy/acme-companion
     container_name: acme-companion
