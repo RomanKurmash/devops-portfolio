@@ -7,14 +7,17 @@ services:
       context: ./mysql-exporter
     container_name: mysql-exporter
     environment:
-      # Формуємо рядок підключення, використовуючи змінні з .env
-      DATA_SOURCE_NAME: "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(mysql-db:3306)/"
+      # Використовуємо root і пароль з .env для повного доступу до метрик
+      DATA_SOURCE_NAME: "root:${MYSQL_ROOT_PASSWORD}@tcp(mysql-db:3306)/"
+    # Ми прибрали прив'язку до файлу my.cnf, тепер все працює через DATA_SOURCE_NAME
     command:
-      # Важливо: ми використовуємо змінну оточення замість файлу .my.cnf для простоти
       - '--collect.global_status'
+      - '--collect.global_variables'
       - '--collect.info_schema.innodb_cmp'
       - '--collect.info_schema.innodb_cmpmem'
       - '--collect.info_schema.query_response_time'
+      - '--collect.info_schema.processlist'
+      - '--collect.info_schema.tables'
     networks:
       - monitor-net
       - apps-net
