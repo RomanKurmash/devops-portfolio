@@ -27,10 +27,7 @@ services:
       WORDPRESS_DB_USER: ${MYSQL_USER}
       WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
       WORDPRESS_DB_NAME: ${MYSQL_DATABASE}
-      # Використовуємо змінну DOMAIN_NAME. Поки там "localhost", це спрацює для VIRTUAL_HOST
       VIRTUAL_HOST: ${DOMAIN_NAME}
-      # LETSENCRYPT_HOST: ${DOMAIN_NAME}
-      # LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
     volumes:
       - wp_data:/var/www/html
     networks:
@@ -43,7 +40,6 @@ services:
     container_name: nginx-proxy
     ports:
       - "80:80"
-      - "443:443"
     environment:
       - DEFAULT_HOST=wordpress-app
     volumes:
@@ -56,21 +52,16 @@ services:
       - apps-net
     restart: unless-stopped
 
-  # 4. SSL Companion
-  acme-companion:
-    image: nginxproxy/acme-companion
-    container_name: acme-companion
-    volumes_from:
-      - nginx-proxy
-    volumes:
-      - certs:/etc/nginx/certs:rw
-      - acme:/etc/acme.sh
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+  # 4. Cloudflare Tunnel (Твій новий безкоштовний прохід)
+  cloudflared-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-tunnel
+    restart: always
+    environment:
+      - TUNNEL_TOKEN=eyJhIjoiMTI2M2IyZTIxNGFiNDRjOTdjYTgzZjg1ODZhZjkwODUiLCJ0IjoiMjFjMTdlNjUtNzMxMy00ZTg3LWIwZWEtMTUwMzkwZmM4ZDhlIiwicyI6Ik9EVXhaalF5WldRdE0yVTNNaTAwTVRZeUxUZ3dNbVV0WkRRM1pHRXpORGs1WW1ObCJ9
+    command: tunnel --no-autoupdate run
     networks:
       - apps-net
-    depends_on:
-      - nginx-proxy
-    restart: unless-stopped
 
 volumes:
   db_data:
@@ -84,4 +75,3 @@ volumes:
 networks:
   apps-net:
     external: true
-    name: apps-net
