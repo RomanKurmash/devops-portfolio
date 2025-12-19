@@ -58,7 +58,7 @@ services:
     container_name: cloudflared-tunnel
     restart: always
     environment:
-      - TUNNEL_TOKEN=eyJhIjoiMTI2M2IyZTIxNGFiNDRjOTdjYTgzZjg1ODZhZjkwODUiLCJ0IjoiMjFjMTdlNjUtNzMxMy00ZTg3LWIwZWEtMTUwMzkwZmM4ZDhlIiwicyI6Ik9EVXhaalF5WldRdE0yVTNNaTAwTVRZeUxUZ3dNbVV0WkRRM1pHRXpORGs1WW1ObCJ9
+      - TUNNEL_TOKEN=docker run cloudflare/cloudflared:latest tunnel --no-autoupdate run --token eyJhIjoiMTI2M2IyZTIxNGFiNDRjOTdjYTgzZjg1ODZhZjkwODUiLCJ0IjoiMjFjMTdlNjUtNzMxMy00ZTg3LWIwZWEtMTUwMzkwZmM4ZDhlIiwicyI6Ik56UXlOR0V4TUdFdE16SXhNQzAwWmpBMUxUbGlOV1V0WVRZNFpXRXpORE01WkRjdyJ9
     command: tunnel --no-autoupdate run
     networks:
       - apps-net
