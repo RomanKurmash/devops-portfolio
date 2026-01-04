@@ -73,7 +73,7 @@ services:
       - ./config/loki/loki-config.yaml:/etc/loki/local-config.yaml
     command: -config.file=/etc/loki/local-config.yaml
     networks:
-      - apps_net
+      - apps-net
       
   promtail:
     image: grafana/promtail:3.0.0
@@ -86,7 +86,7 @@ services:
     depends_on:
       - loki
     networks:
-      - apps_net
+      - apps-net
 
 volumes:
   db_data:
