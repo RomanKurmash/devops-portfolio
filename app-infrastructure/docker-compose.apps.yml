@@ -73,7 +73,7 @@ services:
       - ./config/loki/loki-config.yaml:/etc/loki/local-config.yaml
     command: -config.file=/etc/loki/local-config.yaml
     networks:
-      - appps_net
+      - apps_net
       
   promtail:
     image: grafana/promtail:3.0.0
