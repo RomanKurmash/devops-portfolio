@@ -49,6 +49,11 @@ pipeline {
         stage('3. Deploy Infrastructure') {
             steps {
                 sh """
+                    echo "--- Checking files presence ---"
+                    ls -la ${INFRA_DIR}/config/loki/
+                    file ${INFRA_DIR}/config/loki/loki-config.yaml
+                """
+                sh """
                     echo "=== DEPLOYING STACK ==="
                     cd ${INFRA_DIR}
                     
