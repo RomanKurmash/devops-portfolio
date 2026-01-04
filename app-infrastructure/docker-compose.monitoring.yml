@@ -88,6 +88,7 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
     networks:
       - monitor-net
+      - apps-net
     restart: unless-stopped
 
   # Alertmanager
