@@ -46,21 +46,21 @@ pipeline {
             }
         }
 
-        stage('3. Deploy Infrastructure') {
+       stage('3. Deploy Infrastructure') {
             steps {
                 sh """
-                    echo "--- Checking files presence ---"
+                    echo "=== VERIFYING FILES ==="
                     ls -la ${INFRA_DIR}/config/loki/
-                    file ${INFRA_DIR}/config/loki/loki-config.yaml
-                """
-                sh """
+                    
                     echo "=== DEPLOYING STACK ==="
                     cd ${INFRA_DIR}
                     
-                    # Запуск Додатків
-                    docker compose -f docker-compose.apps.yml up -d
+                    # Примусово видаляємо контейнери Loki/Promtail, якщо вони зависли
+                    docker compose -f docker-compose.apps.yml stop loki promtail || true
+                    docker compose -f docker-compose.apps.yml rm -f loki promtail || true
                     
-                    # Запуск Моніторингу з перезбіркою бота
+                    # Запуск
+                    docker compose -f docker-compose.apps.yml up -d
                     docker compose -f docker-compose.monitoring.yml up -d --build
                 """
             }
