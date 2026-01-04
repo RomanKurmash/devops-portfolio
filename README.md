@@ -8,7 +8,3 @@ Production-ready infrastructure with monitoring, CI/CD and security.
 - ✅ Prometheus + Grafana monitoring
 - ✅ Jenkins CI/CD
 - ✅ Automated deployment
-
-## Quick Start
-```bash
-docker-compose up -d
