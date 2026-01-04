@@ -70,8 +70,8 @@ services:
     ports:
       - "3100:3100"
     volumes:
-      # Використовуємо повний шлях, який Jenkins розуміє на рівні хоста
-      - ${PWD}/app-infrastructure/config/loki:/etc/loki
+      # Прямий мапінг з "істинного" шляху на твоїй Ubuntu
+      - /var/lib/docker/volumes/jenkins-server_jenkins_data/_data/workspace/devops-portfolio/app-infrastructure/config/loki:/etc/loki
     command: -config.file=/etc/loki/loki-config.yaml
     networks:
       - apps-net
@@ -80,7 +80,8 @@ services:
     image: grafana/promtail:3.0.0
     container_name: promtail
     volumes:
-      - ${PWD}/app-infrastructure/config/loki:/etc/promtail
+      # Прямий мапінг з "істинного" шляху на твоїй Ubuntu
+      - /var/lib/docker/volumes/jenkins-server_jenkins_data/_data/workspace/devops-portfolio/app-infrastructure/config/loki:/etc/promtail
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     command: -config.file=/etc/promtail/promtail-config.yaml
