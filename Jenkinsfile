@@ -8,9 +8,11 @@ pipeline {
     }
     
     environment {
-        COMPOSE_PROJECT_NAME = 'devops-portfolio'
-        INFRA_DIR = 'app-infrastructure'
-        NETWORK_NAME = 'apps-net'
+    COMPOSE_PROJECT_NAME = 'devops-portfolio'
+    INFRA_DIR = 'app-infrastructure'
+    NETWORK_NAME = 'apps-net'
+    // Ця магія змусить Docker Compose бачити правильні шляхи
+    PWD = sh(script: 'pwd', returnStdout: true).trim() 
     }
 
     stages {

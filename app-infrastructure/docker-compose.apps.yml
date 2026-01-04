@@ -70,8 +70,7 @@ services:
     ports:
       - "3100:3100"
     volumes:
-      # Монтуємо папку, а не файл. Docker Compose сам розрахує шлях відносно файлу.
-      - ./config/loki:/etc/loki
+      - ${PWD}/config/loki:/etc/loki
     command: -config.file=/etc/loki/loki-config.yaml
     networks:
       - apps-net
@@ -80,7 +79,7 @@ services:
     image: grafana/promtail:3.0.0
     container_name: promtail
     volumes:
-      - ./config/loki:/etc/promtail
+      - ${PWD}/config/loki:/etc/promtail
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     command: -config.file=/etc/promtail/promtail-config.yaml
