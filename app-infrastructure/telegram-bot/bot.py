@@ -19,6 +19,16 @@ CHAT_ID = os.getenv("CHAT_ID")
 LOKI_URL = os.getenv("LOKI_URL")
 TELEGRAM_URL = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
+if not BOT_TOKEN:
+    logger.error("❌ КРИТИЧНО: TELEGRAM_BOT_TOKEN не знайдено!")
+else:
+    logger.info(f"✅ Токен завантажено (перші 5 знаків): {BOT_TOKEN[:5]}...")
+
+if not CHAT_ID:
+    logger.error("❌ КРИТИЧНО: CHAT_ID не знайдено!")
+else:
+    logger.info(f"✅ Chat ID знайдено: {CHAT_ID}")
+
 # Глобальна змінна для відстеження активних алертів
 active_alerts = set()
 
