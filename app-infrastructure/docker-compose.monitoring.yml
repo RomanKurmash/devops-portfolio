@@ -7,9 +7,7 @@ services:
       context: ./mysql-exporter
     container_name: mysql-exporter
     environment:
-      # Використовуємо root і пароль з .env для повного доступу до метрик
-      - DATA_SOURCE_NAME=root:${MYSQL_ROOT_PASSWORD}@tcp(mysql-db:3306)/
-    # Ми прибрали прив'язку до файлу my.cnf, тепер все працює через DATA_SOURCE_NAME
+      - DATA_SOURCE_NAME=${MYSQL_EXPORTER_USER}:${MYSQL_EXPORTER_PASS}@(mysql-db:3306)/
     command:
       - '--collect.global_status'
       - '--collect.global_variables'
