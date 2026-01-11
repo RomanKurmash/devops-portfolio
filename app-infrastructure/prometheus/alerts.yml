@@ -1,85 +1,52 @@
 groups:
   - name: infrastructure
     rules:
-      # Тестовий алерт
-      - alert: AlertingSystemWorking
+      # 1. Watchdog (Замість старого AlertingSystemWorking)
+      # Цей алерт завжди активний. Ми НЕ шлемо його в ТГ (бот ігнорує його), 
+      # але він потрібен для перевірки, що Prometheus бачить Alertmanager.
+      - alert: Watchdog
         expr: vector(1)
         labels:
-          severity: info
-          service: monitoring
+          severity: heartbeat
+          container: "monitoring"
         annotations:
-          summary: "Alerting system is functional"
-          description: "This test alert confirms the alerting pipeline works"
+          summary: "Monitoring pipeline is alive"
 
-      # Nginx алерти
+      # 2. Nginx: Більш стійкі тригери
       - alert: NginxExporterDown
         expr: up{job="nginx"} == 0
-        for: 1m
+        for: 3m # Збільшено до 3 хв, щоб ігнорувати короткі рестарти
         labels:
           severity: critical
-          service: nginx
+          container: "nginx-proxy" # Важливо для логів
         annotations:
-          summary: "Nginx exporter is down"
-          description: "Nginx exporter has been down for more than 1 minute"
+          summary: "Nginx Exporter Down"
+          description: "Exporter for Nginx is unreachable."
 
-      - alert: NginxServiceDown
-        expr: absent(nginx_connections_active)
-        for: 2m
+      - alert: NginxHighErrorRate
+        expr: rate(nginx_http_requests_total{status=~"5.."}[5m]) > 0.5 # Поріг піднято для меншого шуму
+        for: 15m # Тільки якщо стабільно сипле помилками
+        labels:
+          severity: warning
+          container: "nginx-proxy"
+
+      # 3. MySQL: Усунення помилкових спрацювань
+      - alert: MySQLDown
+        expr: absents(container_last_seen{name="mysql-db"}) or (time() - container_last_seen{name="mysql-db"} > 60)
+        for: 5m # Даємо базі час на "роздуми" або автоматичний рестарт
         labels:
           severity: critical
-          service: nginx
+          container: "mysql-db" # Важливо для логів
         annotations:
-          summary: "Nginx service is not responding"
-          description: "Nginx is not providing metrics - service is likely down"
+          summary: "MySQL database is DOWN"
+          description: "MySQL container has been missing for more than 5 minutes."
 
-      # MySQL алерти
-      - alert: MySQLExporterDown
-        expr: up{job="mysql"} == 0
-        for: 1m
-        labels:
-          severity: critical
-          service: mysql
-        annotations:
-          summary: "MySQL exporter is down"
-          description: "MySQL exporter has been down for more than 1 minute"
-
-      - alert: MySQLServiceDown
-        expr: mysql_up == 0
-        for: 2m
-        labels:
-          severity: critical
-          service: mysql
-        annotations:
-          summary: "MySQL database is not responding"
-          description: "MySQL database is down or not accessible"
-
-      # Node алерти
-      - alert: NodeExporterDown
-        expr: up{job="node"} == 0
-        for: 1m
-        labels:
-          severity: critical
-          service: system
-        annotations:
-          summary: "Node exporter is down"
-          description: "Node exporter has been down for more than 1 minute"
-
+      # 4. Система (Node Exporter)
       - alert: HighCPUUsage
-        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
-        for: 2m
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90 # Піднято до 90%
+        for: 10m
         labels:
           severity: warning
-          service: system
+          container: "node-exporter"
         annotations:
-          summary: "High CPU usage on {{ $labels.instance }}"
-          description: "CPU usage is above 80% for 2 minutes"
-
-      - alert: HighMemoryUsage
-        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
-        for: 2m
-        labels:
-          severity: warning
-          service: system
-        annotations:
-          summary: "High memory usage on {{ $labels.instance }}"
-          description: "Memory usage is above 90% for 2 minutes"
+          summary: "Extreme CPU usage on {{ $labels.instance }}"
