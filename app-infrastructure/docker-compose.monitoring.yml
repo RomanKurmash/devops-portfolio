@@ -59,6 +59,9 @@ services:
     ports:
       - "9090:9090"
     volumes:
+      # ЦЕ ТЕ, ЧОГО НЕ ВИСТАЧАЛО:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -66,7 +69,7 @@ services:
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
+      - '--web.enable-lifecycle' # Це супер, що він є!
     networks:
       - monitor-net
       - apps-net
