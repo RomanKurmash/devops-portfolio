@@ -47,6 +47,7 @@ services:
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     networks:
       - monitor-net
+      - apps-net
     restart: unless-stopped
 
   # Prometheus Server
@@ -104,6 +105,7 @@ services:
       - '--storage.path=/alertmanager'
     networks:
       - monitor-net
+      - apps-net    
     restart: unless-stopped
 
   # Telegram Bot

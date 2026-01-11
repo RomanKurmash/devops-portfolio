@@ -1,89 +1,61 @@
 pipeline {
     agent any
-    
-    options {
-        disableConcurrentBuilds()
-        timeout(time: 20, unit: 'MINUTES')
-        retry(1)
-    }
-    
     environment {
         INFRA_DIR = 'app-infrastructure'
         NETWORK_NAME = 'apps-net'
-        // Використовуємо ОДИН проект, щоб Docker розумів логіку заміни контейнерів
-        COMPOSE_PROJECT_NAME = 'devops-portfolio'
+        COMPOSE_PROJECT_NAME = 'devops-portfolio' // Єдине ім'я для всіх
     }
 
     stages {
-        stage('1. Setup & Secrets') {
+        stage('1. Подготовка') {
             steps {
                 cleanWs()
-                echo '🚀 DevOps Portfolio CI/CD Pipeline'
                 checkout scm
-                
                 withCredentials([file(credentialsId: 'devops-portfolio-env', variable: 'ENV_FILE')]) {
                     sh "cp \$ENV_FILE ${INFRA_DIR}/.env"
                 }
-
+                // Створюємо мережу, якщо її немає
                 sh "docker network inspect ${NETWORK_NAME} >/dev/null 2>&1 || docker network create ${NETWORK_NAME}"
             }
         }
         
-        stage('2. Force Cleanup') {
+        stage('2. Очистка конфліктів') {
             steps {
-                script {
-                    echo "=== САНІТАРНА ОЧИСТКА ==="
-                    // Список твоїх фіксованих імен контейнерів
-                    def containers = [
-                        'nginx-proxy', 'wordpress-app', 'mysql-db', 'loki', 'promtail', 'cloudflared-tunnel',
-                        'grafana', 'prometheus', 'telegram-bot', 'mysql-exporter', 'node-exporter', 'nginx-exporter', 'alertmanager'
-                    ]
-                    
-                    // Примусово видаляємо їх, щоб звільнити імена для нових проектів
-                    sh "docker rm -f ${containers.join(' ')} || true"
-                    sh "docker image prune -f"
-                }
+                sh """
+                    cd ${INFRA_DIR}
+                    docker compose -f docker-compose.apps.yml down --remove-orphans || true
+                    docker compose -f docker-compose.monitoring.yml down --remove-orphans || true
+                    docker rm -f mysql-exporter node-exporter nginx-exporter telegram-bot prometheus grafana mysql-db wordpress-app nginx-proxy || true
+                """
             }
         }
 
-       stage('3. Deploy Infrastructure') {
+       stage('3. Full Deploy') {
             steps {
                 sh """
-                    echo "=== DEPLOYING STACKS ==="
                     cd ${INFRA_DIR}
+                    echo "=== Deploying Apps ==="
+                    docker compose -f docker-compose.apps.yml up -d --force-recreate
                     
-                    # Деплоїмо додатки
-                    docker compose -f docker-compose.apps.yml up -d
-                    
-                    # Деплоїмо моніторинг (з перезбіркою без кешу)
+                    echo "=== Deploying Monitoring ==="
                     docker compose -f docker-compose.monitoring.yml build --no-cache
                     docker compose -f docker-compose.monitoring.yml up -d --force-recreate
                 """
             }
         }
-        
+
         stage('4. Health Checks') {
             steps {
                 script {
-                    echo "--- Waiting for services to breathe (20s) ---"
-                    sleep 20
-                    
-                    def containers = [
-                        'nginx-proxy', 'wordpress-app', 'mysql-db', 
-                        'grafana', 'prometheus', 'telegram-bot'
-                    ]
-                    
-                    for (container in containers) {
-                        sh "docker ps -a --filter name=^/${container}\$ --filter status=running --quiet | grep . || (echo '❌ ${container} is DOWN' && exit 1)"
-                        echo "✅ ${container} is UP"
+                    echo "Чекаємо стабілізації (25s)..."
+                    sleep 25
+                    def containers = ['nginx-proxy', 'mysql-db', 'prometheus', 'telegram-bot', 'mysql-exporter']
+                    for (c in containers) {
+                        sh "docker ps -f name=^/${c}\$ -f status=running --quiet | grep . || (echo '❌ ${c} is DOWN' && exit 1)"
+                        echo "✅ ${c} is UP"
                     }
                 }
             }
         }
-    }
-    
-    post {
-        success { echo "🎉 DEPLOYMENT SUCCESSFUL!" }
-        failure { echo "🚨 DEPLOYMENT FAILED" }
     }
 }
