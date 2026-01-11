@@ -113,6 +113,8 @@ services:
     build: 
       context: ./telegram-bot
     container_name: telegram-bot
+    ports:
+      - "8081:8080"
     env_file: 
       - ./.env
     networks:
