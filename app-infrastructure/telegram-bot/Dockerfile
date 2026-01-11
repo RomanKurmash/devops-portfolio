@@ -16,4 +16,4 @@ COPY . .
 EXPOSE 8080
 
 # Запуск асинхронного сервера
-CMD ["python", "main.py"]
+CMD ["python", "bot.py"]
