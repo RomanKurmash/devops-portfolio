@@ -113,6 +113,8 @@ services:
     build: 
       context: ./telegram-bot
     container_name: telegram-bot
+    env_file: 
+      - ../.env
     networks:
       - monitor-net
       - apps-net
