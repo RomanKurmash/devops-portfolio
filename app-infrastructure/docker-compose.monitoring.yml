@@ -9,7 +9,7 @@ services:
     environment:
       - DATA_SOURCE_NAME=${MYSQL_EXPORTER_USER}:${MYSQL_EXPORTER_PASS}@(mysql-db:3306)/
     command:
-      - '--config.my-cnf='  # Цей рядок каже: "Не шукай файл, використовуй ENV"
+      - '--config.my-cnf=""'  # Цей рядок каже: "Не шукай файл, використовуй ENV"
       - '--collect.global_status'
       - '--collect.global_variables'
       - '--collect.info_schema.innodb_cmp'
