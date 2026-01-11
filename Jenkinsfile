@@ -68,7 +68,20 @@ pipeline {
             }
         }
         
-        stage('4. Health Checks') {
+        stage('4. Deploy Monitoring') {
+            steps {
+                // 'devops-portfolio-env' — це ID, який ми бачимо на твоєму скриншоті Jenkins
+                withCredentials([file(credentialsId: 'devops-portfolio-env', variable: 'ENV_FILE')]) {
+                    script {
+                        // Копіюємо секретний файл як .env, щоб docker-compose його підхопив
+                        sh "cp \$ENV_FILE .env"
+                        sh "docker compose -f app-infrastructure/docker-compose.monitoring.yml up -d --force-recreate"
+                    }
+                }
+            }
+        }
+
+        stage('5. Health Checks') {
             steps {
                 script {
                     echo "--- Waiting for services to breathe (15s) ---"
