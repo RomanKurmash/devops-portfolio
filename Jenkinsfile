@@ -68,18 +68,26 @@ pipeline {
             }
         }
         
-        stage('4. Deploy Monitoring') {
-            steps {
-                // 'devops-portfolio-env' — це ID, який ми бачимо на твоєму скриншоті Jenkins
-                withCredentials([file(credentialsId: 'devops-portfolio-env', variable: 'ENV_FILE')]) {
-                    script {
-                        // Копіюємо секретний файл як .env, щоб docker-compose його підхопив
-                        sh "cp \$ENV_FILE .env"
-                        sh "docker compose -f app-infrastructure/docker-compose.monitoring.yml up -d --force-recreate"
-                    }
-                }
+        stage('Deploy Monitoring') {
+    steps {
+        // Використовуємо твій Secret file з Jenkins Credentials
+        withCredentials([file(credentialsId: 'devops-portfolio-env', variable: 'ENV_FILE')]) {
+            script {
+                // 1. Копіюємо секрети в папку, де лежить docker-compose
+                sh "cp \$ENV_FILE app-infrastructure/.env"
+                
+                // 2. Очищення та збірка: --no-cache гарантує, що Docker не візьме старі шари
+                // Ми прибираємо назву конкретного сервісу, щоб це подіяло на ВCI сервіси у файлі
+                sh "docker compose -f app-infrastructure/docker-compose.monitoring.yml build --no-cache"
+                
+                // 3. Деплой: --force-recreate змушує Docker перестворити контейнери, 
+                // навіть якщо конфіг не змінився (це оновить змінні оточення)
+                // Додаємо --remove-orphans, щоб прибрати старі "хвости", про які тобі писав Docker раніше
+                sh "docker compose -f app-infrastructure/docker-compose.monitoring.yml up -d --force-recreate --remove-orphans"
             }
         }
+    }
+}
 
         stage('5. Health Checks') {
             steps {
