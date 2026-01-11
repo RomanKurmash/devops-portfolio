@@ -10,9 +10,8 @@ pipeline {
     environment {
         INFRA_DIR = 'app-infrastructure'
         NETWORK_NAME = 'apps-net'
-        // Розділяємо імена проектів, щоб уникнути конфліктів orphans
-        APPS_PROJECT = 'portfolio-apps'
-        MON_PROJECT = 'portfolio-monitoring'
+        // Використовуємо ОДИН проект, щоб Docker розумів логіку заміни контейнерів
+        COMPOSE_PROJECT_NAME = 'devops-portfolio'
     }
 
     stages {
@@ -30,40 +29,40 @@ pipeline {
             }
         }
         
-        stage('2. Smart Cleanup') {
+        stage('2. Force Cleanup') {
             steps {
-                sh """
-                    echo "=== CLEANUP ==="
-                    cd ${INFRA_DIR}
-                    docker compose -p ${APPS_PROJECT} -f docker-compose.apps.yml down --remove-orphans || true
-                    docker compose -p ${MON_PROJECT} -f docker-compose.monitoring.yml down --remove-orphans || true
-                    docker image prune -f
-                """
+                script {
+                    echo "=== САНІТАРНА ОЧИСТКА ==="
+                    // Список твоїх фіксованих імен контейнерів
+                    def containers = [
+                        'nginx-proxy', 'wordpress-app', 'mysql-db', 'loki', 'promtail', 'cloudflared-tunnel',
+                        'grafana', 'prometheus', 'telegram-bot', 'mysql-exporter', 'node-exporter', 'nginx-exporter', 'alertmanager'
+                    ]
+                    
+                    // Примусово видаляємо їх, щоб звільнити імена для нових проектів
+                    sh "docker rm -f ${containers.join(' ')} || true"
+                    sh "docker image prune -f"
+                }
             }
         }
 
-       stage('3. Deploy Apps') {
+       stage('3. Deploy Infrastructure') {
             steps {
                 sh """
-                    echo "=== DEPLOYING APPS STACK ==="
+                    echo "=== DEPLOYING STACKS ==="
                     cd ${INFRA_DIR}
-                    docker compose -p ${APPS_PROJECT} -f docker-compose.apps.yml up -d --force-recreate
+                    
+                    # Деплоїмо додатки
+                    docker compose -f docker-compose.apps.yml up -d
+                    
+                    # Деплоїмо моніторинг (з перезбіркою без кешу)
+                    docker compose -f docker-compose.monitoring.yml build --no-cache
+                    docker compose -f docker-compose.monitoring.yml up -d --force-recreate
                 """
             }
         }
         
-        stage('4. Deploy Monitoring') {
-            steps {
-                sh """
-                    echo "=== DEPLOYING MONITORING STACK ==="
-                    cd ${INFRA_DIR}
-                    docker compose -p ${MON_PROJECT} -f docker-compose.monitoring.yml build --no-cache
-                    docker compose -p ${MON_PROJECT} -f docker-compose.monitoring.yml up -d --force-recreate --remove-orphans
-                """
-            }
-        }
-
-        stage('5. Health Checks') {
+        stage('4. Health Checks') {
             steps {
                 script {
                     echo "--- Waiting for services to breathe (20s) ---"
@@ -75,7 +74,7 @@ pipeline {
                     ]
                     
                     for (container in containers) {
-                        sh "docker ps -a --filter name=${container} --filter status=running --quiet | grep . || (echo '❌ ${container} is DOWN' && exit 1)"
+                        sh "docker ps -a --filter name=^/${container}\$ --filter status=running --quiet | grep . || (echo '❌ ${container} is DOWN' && exit 1)"
                         echo "✅ ${container} is UP"
                     }
                 }
@@ -84,11 +83,7 @@ pipeline {
     }
     
     post {
-        success {
-            echo "🎉 DEPLOYMENT SUCCESSFUL!"
-        }
-        failure {
-            echo "🚨 DEPLOYMENT FAILED"
-        }
+        success { echo "🎉 DEPLOYMENT SUCCESSFUL!" }
+        failure { echo "🚨 DEPLOYMENT FAILED" }
     }
 }
