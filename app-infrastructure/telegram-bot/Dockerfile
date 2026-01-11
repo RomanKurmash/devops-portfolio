@@ -1,12 +1,19 @@
-FROM python:3.9-alpine
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Копіюємо код бота всередину образу
-COPY . /app
+# Оптимізація Python: не створювати .pyc та не буферизувати логи
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
-# Встановлюємо залежності одразу при збірці
-RUN pip install flask requests
+# Копіюємо та встановлюємо залежності
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Запускаємо
-CMD ["python", "bot.py"]
+# Копіюємо весь код
+COPY . .
+
+EXPOSE 8080
+
+# Запуск асинхронного сервера
+CMD ["python", "main.py"]

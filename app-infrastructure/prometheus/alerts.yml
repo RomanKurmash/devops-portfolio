@@ -32,7 +32,7 @@ groups:
 
       # 3. MySQL: Усунення помилкових спрацювань
       - alert: MySQLDown
-        expr: absents(container_last_seen{name="mysql-db"}) or (time() - container_last_seen{name="mysql-db"} > 60)
+        expr: absent(container_last_seen{name="mysql-db"}) or (time() - container_last_seen{name="mysql-db"} > 60)
         for: 5m # Даємо базі час на "роздуми" або автоматичний рестарт
         labels:
           severity: critical
