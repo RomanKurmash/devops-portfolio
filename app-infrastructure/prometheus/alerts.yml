@@ -33,7 +33,7 @@ groups:
       # 3. MySQL: Усунення помилкових спрацювань
       - alert: MySQLDown
         expr: mysql_up == 0
-        for: 1m # Даємо базі час на "роздуми" або автоматичний рестарт
+        for: 5s # Даємо базі час на "роздуми" або автоматичний рестарт
         labels:
           severity: critical
           container: "mysql-db" # Важливо для логів
