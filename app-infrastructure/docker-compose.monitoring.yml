@@ -3,12 +3,16 @@ version: '3.8'
 services:
   # MySQL Exporter
   mysql-exporter:
-    image: prom/mysqld-exporter:v0.18.0  # Використовуємо пряме посилання на образ
+    build:
+      context: ./mysql-exporter
     container_name: mysql-exporter
     environment:
-      - DATA_SOURCE_NAME=${MYSQL_EXPORTER_USER}:${MYSQL_EXPORTER_PASS}@(mysql-db:3306)/
+      # Ці змінні змушують експортер ігнорувати файли і брати дані з оточення
+      - MYSQLD_EXPORTER_USER=${MYSQL_EXPORTER_USER}
+      - MYSQLD_EXPORTER_PASSWORD=${MYSQL_EXPORTER_PASS}
     command:
-      - '--config.my-cnf=/dev/null'  # Спрямовуємо пошук конфігу в "порожнечу"
+      # Вказуємо адресу бази через прапорець, щоб він не шукав її в конфігах
+      - '--mysqld.address=mysql-db:3306'
       - '--collect.global_status'
       - '--collect.global_variables'
       - '--collect.info_schema.innodb_cmp'
