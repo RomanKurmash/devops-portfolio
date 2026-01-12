@@ -1,1 +1,2 @@
-FROM prom/mysqld-exporter:v0.18.0
+FROM prom/mysqld-exporter
+COPY .my.cnf /.my.cnf

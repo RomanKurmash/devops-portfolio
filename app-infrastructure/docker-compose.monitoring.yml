@@ -6,20 +6,12 @@ services:
     build:
       context: ./mysql-exporter
     container_name: mysql-exporter
+    volumes:
+      # Прокидаємо файл напряму в корінь, де його шукає експортер
+      - ./mysql-exporter/.my.cnf:/.my.cnf:ro
     environment:
-      # Ці змінні змушують експортер ігнорувати файли і брати дані з оточення
-      - MYSQLD_EXPORTER_USER=${MYSQL_EXPORTER_USER}
-      - MYSQLD_EXPORTER_PASSWORD=${MYSQL_EXPORTER_PASS}
-    command:
-      # Вказуємо адресу бази через прапорець, щоб він не шукав її в конфігах
-      - '--mysqld.address=mysql-db:3306'
-      - '--collect.global_status'
-      - '--collect.global_variables'
-      - '--collect.info_schema.innodb_cmp'
-      - '--collect.info_schema.innodb_cmpmem'
-      - '--collect.info_schema.query_response_time'
-      - '--collect.info_schema.processlist'
-      - '--collect.info_schema.tables'
+      - MYSQL_EXPORTER_USER=${MYSQL_EXPORTER_USER}
+      - MYSQL_EXPORTER_PASS=${MYSQL_EXPORTER_PASS}
     networks:
       - apps-net
       - monitor-net
