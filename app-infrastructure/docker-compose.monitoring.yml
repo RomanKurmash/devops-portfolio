@@ -3,14 +3,12 @@ version: '3.8'
 services:
   # MySQL Exporter
   mysql-exporter:
-    build:
-      context: ./mysql-exporter
+    image: prom/mysqld-exporter:v0.18.0  # Використовуємо пряме посилання на образ
     container_name: mysql-exporter
     environment:
       - DATA_SOURCE_NAME=${MYSQL_EXPORTER_USER}:${MYSQL_EXPORTER_PASS}@(mysql-db:3306)/
-      # Це змусить бінарник ігнорувати системні шляхи до файлів
-      - MYSQLD_EXPORTER_CONFIG= 
     command:
+      - '--config.my-cnf=/dev/null'  # Спрямовуємо пошук конфігу в "порожнечу"
       - '--collect.global_status'
       - '--collect.global_variables'
       - '--collect.info_schema.innodb_cmp'
