@@ -8,8 +8,9 @@ services:
     container_name: mysql-exporter
     environment:
       - DATA_SOURCE_NAME=${MYSQL_EXPORTER_USER}:${MYSQL_EXPORTER_PASS}@(mysql-db:3306)/
+      # Це змусить бінарник ігнорувати системні шляхи до файлів
+      - MYSQLD_EXPORTER_CONFIG= 
     command:
-      - '--config.my-cnf=""'  # Цей рядок каже: "Не шукай файл, використовуй ENV"
       - '--collect.global_status'
       - '--collect.global_variables'
       - '--collect.info_schema.innodb_cmp'
