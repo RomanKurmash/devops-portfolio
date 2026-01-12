@@ -6,9 +6,6 @@ services:
     build:
       context: ./mysql-exporter
     container_name: mysql-exporter
-    volumes:
-      # Прокидаємо файл напряму в корінь, де його шукає експортер
-      - ./mysql-exporter/.my.cnf:/.my.cnf:ro
     environment:
       - MYSQL_EXPORTER_USER=${MYSQL_EXPORTER_USER}
       - MYSQL_EXPORTER_PASS=${MYSQL_EXPORTER_PASS}
