@@ -14,8 +14,10 @@ pipeline {
                 withCredentials([file(credentialsId: 'devops-portfolio-env', variable: 'ENV_FILE')]) {
                     sh "cp \$ENV_FILE ${INFRA_DIR}/.env"
                 }
-                // Створюємо мережу, якщо її немає
-                sh "docker network inspect ${NETWORK_NAME} >/dev/null 2>&1 || docker network create ${NETWORK_NAME}"
+                
+                // Гарантуємо наявність обох мереж перед стартом
+                sh "docker network inspect monitor-net >/dev/null 2>&1 || docker network create monitor-net"
+                sh "docker network inspect apps-net >/dev/null 2>&1 || docker network create apps-net"
             }
         }
         
