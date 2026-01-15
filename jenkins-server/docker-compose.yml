@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   # Jenkins CI Server
   jenkins:
@@ -12,8 +13,13 @@ services:
       - jenkins_data:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
       - /usr/bin/docker:/usr/bin/docker
+      # Синхронізація часу з твоїм Nitro AN515
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     environment:
       - DOCKER_HOST=unix:///var/run/docker.sock
+      # Критично для Jenkins: виставляємо часовий пояс для логів та білдів
+      - JAVA_OPTS=-Duser.timezone=Europe/Kyiv
     networks:
       - jenkins-net
       - apps-net

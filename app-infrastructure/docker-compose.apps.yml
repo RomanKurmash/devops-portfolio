@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # 1. MySQL Database
   mysql-db:
     image: mysql:8.0
     container_name: mysql-db
@@ -12,11 +11,12 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     networks:
       - apps-net
     restart: unless-stopped
 
-  # 2. WordPress
   wordpress-app:
     image: wordpress:latest
     container_name: wordpress-app
@@ -31,11 +31,12 @@ services:
       VIRTUAL_PORT: 80
     volumes:
       - wp_data:/var/www/html
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     networks:
       - apps-net
     restart: unless-stopped
 
-  # 3. Nginx Reverse Proxy
   nginx-proxy:
     image: nginxproxy/nginx-proxy:alpine
     container_name: nginx-proxy
@@ -49,18 +50,18 @@ services:
       - html:/usr/share/nginx/html
       - certs:/etc/nginx/certs:ro
       - /var/run/docker.sock:/tmp/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     networks:
       - apps-net
     restart: unless-stopped
 
-  # 4. Cloudflare Tunnel 
   cloudflared-tunnel:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared-tunnel
     restart: always
-    environment:
-      - TUNNEL_TOKEN=eyJhIjoiMTI2M2IyZTIxNGFiNDRjOTdjYTgzZjg1ODZhZjkwODUiLCJ0IjoiMjFjMTdlNjUtNzMxMy00ZTg3LWIwZWEtMTUwMzkwZmM4ZDhlIiwicyI6IlkyTTBabUkxTmpZdFltSmlNeTAwWWpjeUxUa3hPRFF0TmpjMlpXVTNaVEl3TkdaayJ9
-    command: tunnel --no-autoupdate run
+    # Вставляємо токен прямо сюди для тесту
+    command: tunnel --no-autoupdate run --token eyJhIjoiMTI2M2IyZTIxNGFiNDRjOTdjYTgzZjg1ODZhZjkwODUiLCJ0IjoiMjFjMTdlNjUtNzMxMy00ZTg3LWIwZWEtMTUwMzkwZmM4ZDhlIiwicyI6IlkyTTBabUkxTmpZdFltSmlNeTAwWWpjeUxUa3hPRFF0TmpjMlpXVTNaVEl3TkdaayJ9
     networks:
       - apps-net
 
@@ -70,8 +71,9 @@ services:
     ports:
       - "3100:3100"
     volumes:
-      # Прямий мапінг з "істинного" шляху на Ubuntu
-      - /var/lib/docker/volumes/jenkins-server_jenkins_data/_data/workspace/devops-portfolio/app-infrastructure/config/loki:/etc/loki
+      - ./config/loki:/etc/loki
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     command: -config.file=/etc/loki/loki-config.yaml
     networks:
       - apps-net
@@ -80,10 +82,11 @@ services:
     image: grafana/promtail:3.0.0
     container_name: promtail
     volumes:
-      # Прямий мапінг з "істинного" шляху на Ubuntu
-      - /var/lib/docker/volumes/jenkins-server_jenkins_data/_data/workspace/devops-portfolio/app-infrastructure/config/loki:/etc/promtail
+      - ./config/loki:/etc/promtail
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     command: -config.file=/etc/promtail/promtail-config.yaml
     depends_on:
       - loki
@@ -97,10 +100,7 @@ volumes:
   vhost:
   html:
   certs:
-  acme:
 
 networks:
   apps-net:
     external: true
-
-
