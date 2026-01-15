@@ -55,8 +55,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
+      # ВИДАЛЕНО: ./prometheus/*.yml — вони вже в образі (через COPY в Dockerfile)
       - prometheus_data:/prometheus
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
@@ -70,11 +69,13 @@ services:
     restart: unless-stopped
 
   grafana:
+    # ПОРАДА: Для Grafana теж краще зробити build, щоб запекти дашборди
     image: grafana/grafana:latest
     container_name: grafana
     ports:
       - "3000:3000"
     volumes:
+      # ТИМЧАСОВО ЗАЛИШЕНО: Якщо впаде з тією ж помилкою — треба буде робити COPY в Dockerfile
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/dashboards:/var/lib/grafana/dashboards
       - grafana_data:/var/lib/grafana
@@ -95,6 +96,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
+      # ВИДАЛЕНО: волюм для alertmanager.yml — він вже в Dockerfile
     ports:
       - "9093:9093"
     command:
