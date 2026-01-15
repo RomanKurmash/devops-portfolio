@@ -3,7 +3,7 @@
 # DevOps Portfolio Backup Script
 # Простий та ефективний бекап інфраструктури
 
-set -e  # Зупиняємось при помилці
+set -e  
 
 # Конфігурація
 BACKUP_DIR="./backups"
@@ -83,16 +83,16 @@ echo "📍 Location: $FINAL_FILE"
 echo -e "${BLUE}======================${NC}"
 
 # 8. Нотифікація в Telegram (опційно)
-send_telegram_notification() {
-    local message="✅ DevOps Portfolio Backup Completed
-📦 Name: $BACKUP_NAME  
-💾 Size: $(du -h $FINAL_FILE | cut -f1)
-📅 Date: $(date +'%Y-%m-%d %H:%M:%S')"
+#send_telegram_notification() {
+#    local message="✅ DevOps Portfolio Backup Completed
+#📦 Name: $BACKUP_NAME  
+#💾 Size: $(du -h $FINAL_FILE | cut -f1)
+#📅 Date: $(date +'%Y-%m-%d %H:%M:%S')"
     
-    curl -s -X POST "https://api.telegram.org/bot8422673774:AAEAnEm-aQmsMncyuUPPIt081vbasiJvZ_0/sendMessage" \
-        -d "chat_id=874334948" \
-        -d "text=$message" >/dev/null 2>&1 && log "📱 Notification sent to Telegram"
-}
+#    curl -s -X POST "https://api.telegram.org/bot8422673774:AAEAnEm-aQmsMncyuUPPIt081vbasiJvZ_0/sendMessage" \
+#        -d "chat_id=874334948" \
+#        -d "text=$message" >/dev/null 2>&1 && log "📱 Notification sent to Telegram"
+#}
 
 # Викликаємо нотифікацію
-send_telegram_notification
+#send_telegram_notification

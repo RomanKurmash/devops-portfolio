@@ -53,7 +53,7 @@ services:
       - apps-net
     restart: unless-stopped
 
-  # 4. Cloudflare Tunnel (Твій новий безкоштовний прохід)
+  # 4. Cloudflare Tunnel 
   cloudflared-tunnel:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared-tunnel
@@ -70,7 +70,7 @@ services:
     ports:
       - "3100:3100"
     volumes:
-      # Прямий мапінг з "істинного" шляху на твоїй Ubuntu
+      # Прямий мапінг з "істинного" шляху на Ubuntu
       - /var/lib/docker/volumes/jenkins-server_jenkins_data/_data/workspace/devops-portfolio/app-infrastructure/config/loki:/etc/loki
     command: -config.file=/etc/loki/loki-config.yaml
     networks:
@@ -80,7 +80,7 @@ services:
     image: grafana/promtail:3.0.0
     container_name: promtail
     volumes:
-      # Прямий мапінг з "істинного" шляху на твоїй Ubuntu
+      # Прямий мапінг з "істинного" шляху на Ubuntu
       - /var/lib/docker/volumes/jenkins-server_jenkins_data/_data/workspace/devops-portfolio/app-infrastructure/config/loki:/etc/promtail
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/lib/docker/containers:/var/lib/docker/containers:ro

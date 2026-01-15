@@ -51,7 +51,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      # Використовуємо прямий шлях на твоїй Ubuntu (хості)
+      # Прямий шлях на (хості)
       - /var/lib/docker/volumes/jenkins-server_jenkins_data/_data/workspace/devops-portfolio/app-infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - /var/lib/docker/volumes/jenkins-server_jenkins_data/_data/workspace/devops-portfolio/app-infrastructure/prometheus/alerts.yml:/etc/prometheus/alerts.yml
       - prometheus_data:/prometheus
@@ -78,7 +78,6 @@ services:
       - ./grafana/dashboards:/var/lib/grafana/dashboards
       - grafana_data:/var/lib/grafana
     environment:
-      # Беремо пароль з .env
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
     networks:
