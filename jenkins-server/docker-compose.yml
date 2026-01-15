@@ -13,7 +13,7 @@ services:
       - jenkins_data:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
       - /usr/bin/docker:/usr/bin/docker
-      # Синхронізація часу з твоїм Nitro AN515
+      - /usr/libexec/docker/cli-plugins:/usr/lib/docker/cli-plugins:ro
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
     environment:
