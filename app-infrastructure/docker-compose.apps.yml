@@ -66,32 +66,40 @@ services:
       - apps-net
 
   loki:
-    image: grafana/loki:3.0.0
+    build:
+      context: .
+      dockerfile: ./config/loki/Dockerfile
     container_name: loki
     ports:
       - "3100:3100"
     volumes:
-      - ./config/loki:/etc/loki
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
     command: -config.file=/etc/loki/loki-config.yaml
     networks:
+      - monitor-net
       - apps-net
+    restart: unless-stopped
 
   promtail:
-    image: grafana/promtail:3.0.0
+    build:
+      context: .
+      dockerfile: ./promtail/Dockerfile
     container_name: promtail
     volumes:
-      - ./config/loki:/etc/promtail
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
     command: -config.file=/etc/promtail/promtail-config.yaml
     depends_on:
       - loki
     networks:
+      - monitor-net
       - apps-net
+    restart: unless-stopped
+
+
 
 volumes:
   db_data:
@@ -103,4 +111,6 @@ volumes:
 
 networks:
   apps-net:
+    external: true
+  monitor-net:
     external: true
