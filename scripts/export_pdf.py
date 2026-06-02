@@ -52,7 +52,7 @@ def convert_md_to_pdf(md_path, pdf_path):
         body {{
             font-family: 'DejaVuSans', sans-serif;
             font-size: 10pt;
-            line-height: 1.6;
+            line-height: 1.5;
             color: #334155;
         }}
         h1 {{
@@ -96,9 +96,10 @@ def convert_md_to_pdf(md_path, pdf_path):
             font-size: 8.5pt;
         }}
         pre {{
-            background-color: #0f172a;
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
             border-left: 3px solid #3b82f6;
-            padding: 12px;
+            padding: 10px;
             margin-top: 10px;
             margin-bottom: 20px;
             display: block;
@@ -106,7 +107,7 @@ def convert_md_to_pdf(md_path, pdf_path):
         pre code {{
             font-family: 'DejaVuSansMono', monospace;
             background-color: transparent;
-            color: #f8fafc;
+            color: #0f172a;
             border: none;
             padding: 0;
             font-size: 8pt;
