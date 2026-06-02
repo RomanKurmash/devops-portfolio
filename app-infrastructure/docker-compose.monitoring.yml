@@ -55,7 +55,6 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      # ВИДАЛЕНО: ./prometheus/*.yml — вони вже в образі (через COPY в Dockerfile)
       - prometheus_data:/prometheus
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
@@ -69,13 +68,11 @@ services:
     restart: unless-stopped
 
   grafana:
-    # ПОРАДА: Для Grafana теж краще зробити build, щоб запекти дашборди
     image: grafana/grafana:latest
     container_name: grafana
     ports:
       - "3000:3000"
     volumes:
-      # ТИМЧАСОВО ЗАЛИШЕНО: Якщо впаде з тією ж помилкою — треба буде робити COPY в Dockerfile
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/dashboards:/var/lib/grafana/dashboards
       - grafana_data:/var/lib/grafana
@@ -96,7 +93,6 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
-      # ВИДАЛЕНО: волюм для alertmanager.yml — він вже в Dockerfile
     ports:
       - "9093:9093"
     command:
@@ -117,14 +113,56 @@ services:
       - "8081:8080"
     env_file: 
       - .env
+    environment:
+      - OLLAMA_URL=http://ollama:11434
     networks:
       - monitor-net
       - apps-net
     restart: unless-stopped
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    volumes:
+      - ollama_data:/root/.ollama
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    networks:
+      - monitor-net
+      - apps-net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities:
+                - gpu
+    restart: unless-stopped
+
+  ai-adapter:
+    build:
+      context: ./ai-adapter
+    container_name: ai-adapter
+    environment:
+      - LOKI_URL=http://loki:3100/loki/api/v1/query_range
+      - OLLAMA_URL=http://ollama:11434
+      - ALERTMANAGER_URL=http://alertmanager:9093/api/v2/alerts
+      - SCAN_INTERVAL=60
+      - LOKI_QUERY={container=~"wordpress-app|nginx-proxy"}
+      - LLM_MODEL=llama3
+    networks:
+      - monitor-net
+      - apps-net
+    restart: unless-stopped
+    depends_on:
+      - ollama
+      - alertmanager
+
 volumes:
   prometheus_data:
   grafana_data:
+  ollama_data:
 
 networks:
   monitor-net:
