@@ -13,23 +13,37 @@ def convert_md_to_pdf(md_path, pdf_path):
         md_content,
         extensions=["extra", "codehilite", "toc"]
     )
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    font_regular = os.path.join(script_dir, "fonts", "DejaVuSans.ttf")
+    font_bold = os.path.join(script_dir, "fonts", "DejaVuSans-Bold.ttf")
     styled_html = f"""
     <html>
     <head>
     <meta charset="utf-8">
     <style>
+        @font-face {{
+            font-family: 'DejaVuSans';
+            src: url('{font_regular}');
+        }}
+        @font-face {{
+            font-family: 'DejaVuSans';
+            src: url('{font_bold}');
+            font-weight: bold;
+        }}
         @page {{
             size: A4;
             margin: 2cm;
         }}
         body {{
-            font-family: Helvetica, Arial, sans-serif;
-            font-size: 11pt;
-            line-height: 1.6;
+            font-family: 'DejaVuSans', sans-serif;
+            font-size: 10pt;
+            line-height: 1.5;
             color: #333333;
         }}
         h1 {{
-            font-size: 20pt;
+            font-family: 'DejaVuSans', sans-serif;
+            font-weight: bold;
+            font-size: 18pt;
             color: #1e3a8a;
             border-bottom: 1px solid #e5e7eb;
             padding-bottom: 5px;
@@ -37,13 +51,17 @@ def convert_md_to_pdf(md_path, pdf_path):
             margin-bottom: 20px;
         }}
         h2 {{
-            font-size: 16pt;
+            font-family: 'DejaVuSans', sans-serif;
+            font-weight: bold;
+            font-size: 14pt;
             color: #2563eb;
             margin-top: 20px;
             margin-bottom: 10px;
         }}
         h3 {{
-            font-size: 13pt;
+            font-family: 'DejaVuSans', sans-serif;
+            font-weight: bold;
+            font-size: 12pt;
             color: #3b82f6;
             margin-top: 15px;
             margin-bottom: 5px;
@@ -52,10 +70,10 @@ def convert_md_to_pdf(md_path, pdf_path):
             margin-bottom: 10px;
         }}
         code {{
-            font-family: Courier, monospace;
+            font-family: monospace;
             background-color: #f3f4f6;
             padding: 2px 4px;
-            font-size: 9.5pt;
+            font-size: 9pt;
         }}
         pre {{
             background-color: #f3f4f6;
