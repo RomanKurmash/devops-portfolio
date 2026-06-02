@@ -1,7 +1,35 @@
 import os
 import sys
+import re
+import base64
+import hashlib
+import requests
 import markdown
 from xhtml2pdf import pisa
+
+def process_mermaid_diagrams(md_content, output_dir):
+    images_dir = os.path.join(output_dir, "images")
+    os.makedirs(images_dir, exist_ok=True)
+    pattern = re.compile(r'```mermaid\s*\n(.*?)\n\s*```', re.DOTALL)
+    def replace_mermaid(match):
+        code = match.group(1).strip()
+        b64_code = base64.urlsafe_b64encode(code.encode('utf-8')).decode('utf-8')
+        url = f"https://mermaid.ink/img/{b64_code}"
+        code_hash = hashlib.md5(code.encode('utf-8')).hexdigest()
+        img_filename = f"mermaid_{code_hash}.png"
+        img_path = os.path.join(images_dir, img_filename)
+        try:
+            r = requests.get(url, timeout=15)
+            if r.status_code == 200:
+                with open(img_path, "wb") as f:
+                    f.write(r.content)
+                return f'<img src="{img_path}" class="mermaid-diagram" />'
+            else:
+                print(f"Warning: Failed to render Mermaid diagram via API (status {r.status_code})")
+        except Exception as e:
+            print(f"Warning: Failed to fetch Mermaid diagram: {e}")
+        return match.group(0)
+    return pattern.sub(replace_mermaid, md_content)
 
 def convert_md_to_pdf(md_path, pdf_path):
     if not os.path.exists(md_path):
@@ -9,6 +37,8 @@ def convert_md_to_pdf(md_path, pdf_path):
         return False
     with open(md_path, "r", encoding="utf-8") as f:
         md_content = f.read()
+    output_dir = os.path.dirname(pdf_path)
+    md_content = process_mermaid_diagrams(md_content, output_dir)
     html_content = markdown.markdown(
         md_content,
         extensions=["extra", "codehilite", "toc"]
@@ -112,6 +142,12 @@ def convert_md_to_pdf(md_path, pdf_path):
             padding: 0;
             font-size: 8pt;
             line-height: 1.4;
+        }}
+        .mermaid-diagram {{
+            display: block;
+            margin: 15px auto;
+            max-width: 100%;
+            height: auto;
         }}
         ul, ol {{
             margin-top: 5px;

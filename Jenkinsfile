@@ -44,7 +44,7 @@ pipeline {
         stage('4. Generate PDFs') {
             steps {
                 sh """
-                    docker run --rm -v \$(pwd):/workspace -w /workspace python:3.12-slim sh -c "pip install --no-cache-dir markdown xhtml2pdf && python3 scripts/export_pdf.py"
+                    docker run --rm -v \$(pwd):/workspace -w /workspace python:3.12-slim sh -c "pip install --no-cache-dir markdown xhtml2pdf requests && python3 scripts/export_pdf.py"
                 """
             }
         }
