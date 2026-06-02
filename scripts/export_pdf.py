@@ -37,6 +37,8 @@ def convert_md_to_pdf(md_path, pdf_path):
         return False
     with open(md_path, "r", encoding="utf-8") as f:
         md_content = f.read()
+    md_content = re.sub(r'[\U0001f300-\U0001f9ff\u2600-\u27bf]', '', md_content)
+    md_content = re.sub(r' +', ' ', md_content)
     output_dir = os.path.dirname(pdf_path)
     md_content = process_mermaid_diagrams(md_content, output_dir)
     html_content = markdown.markdown(
