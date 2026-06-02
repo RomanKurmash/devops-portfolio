@@ -16,6 +16,7 @@ def convert_md_to_pdf(md_path, pdf_path):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     font_regular = os.path.join(script_dir, "fonts", "DejaVuSans.ttf")
     font_bold = os.path.join(script_dir, "fonts", "DejaVuSans-Bold.ttf")
+    font_mono = os.path.join(script_dir, "fonts", "DejaVuSansMono.ttf")
     styled_html = f"""
     <html>
     <head>
@@ -29,6 +30,10 @@ def convert_md_to_pdf(md_path, pdf_path):
             font-family: 'DejaVuSans';
             src: url('{font_bold}');
             font-weight: bold;
+        }}
+        @font-face {{
+            font-family: 'DejaVuSansMono';
+            src: url('{font_mono}');
         }}
         @page {{
             size: A4;
@@ -70,7 +75,7 @@ def convert_md_to_pdf(md_path, pdf_path):
             margin-bottom: 10px;
         }}
         code {{
-            font-family: monospace;
+            font-family: 'DejaVuSansMono', monospace;
             background-color: #f3f4f6;
             padding: 2px 4px;
             font-size: 9pt;
@@ -83,8 +88,10 @@ def convert_md_to_pdf(md_path, pdf_path):
             display: block;
         }}
         pre code {{
+            font-family: 'DejaVuSansMono', monospace;
             background-color: transparent;
             padding: 0;
+            font-size: 8.5pt;
         }}
         ul, ol {{
             margin-top: 5px;
