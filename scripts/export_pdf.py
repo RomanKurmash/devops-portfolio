@@ -37,87 +37,125 @@ def convert_md_to_pdf(md_path, pdf_path):
         }}
         @page {{
             size: A4;
-            margin: 2cm;
+            @frame header_frame {{
+                -pdf-frame-content: header_content;
+                left: 54pt; width: 487pt; top: 36pt; height: 30pt;
+            }}
+            @frame content_frame {{
+                left: 54pt; width: 487pt; top: 80pt; height: 680pt;
+            }}
+            @frame footer_frame {{
+                -pdf-frame-content: footer_content;
+                left: 54pt; width: 487pt; top: 780pt; height: 30pt;
+            }}
         }}
         body {{
             font-family: 'DejaVuSans', sans-serif;
             font-size: 10pt;
-            line-height: 1.5;
-            color: #333333;
+            line-height: 1.6;
+            color: #334155;
         }}
         h1 {{
             font-family: 'DejaVuSans', sans-serif;
             font-weight: bold;
             font-size: 18pt;
             color: #1e3a8a;
-            border-bottom: 1px solid #e5e7eb;
-            padding-bottom: 5px;
-            margin-top: 20px;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 6px;
+            margin-top: 10px;
             margin-bottom: 20px;
         }}
         h2 {{
             font-family: 'DejaVuSans', sans-serif;
             font-weight: bold;
-            font-size: 14pt;
-            color: #2563eb;
-            margin-top: 20px;
-            margin-bottom: 10px;
+            font-size: 13pt;
+            color: #0f172a;
+            margin-top: 25px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #cbd5e1;
+            padding-bottom: 4px;
         }}
         h3 {{
             font-family: 'DejaVuSans', sans-serif;
             font-weight: bold;
-            font-size: 12pt;
-            color: #3b82f6;
-            margin-top: 15px;
-            margin-bottom: 5px;
+            font-size: 11pt;
+            color: #2563eb;
+            margin-top: 20px;
+            margin-bottom: 8px;
         }}
         p {{
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            text-align: justify;
         }}
         code {{
             font-family: 'DejaVuSansMono', monospace;
-            background-color: #f3f4f6;
-            padding: 2px 4px;
-            font-size: 9pt;
+            background-color: #f1f5f9;
+            color: #0f172a;
+            border: 0.5px solid #cbd5e1;
+            padding: 1px 4px;
+            font-size: 8.5pt;
         }}
         pre {{
-            background-color: #f3f4f6;
-            border: 1px solid #e5e7eb;
-            padding: 10px;
-            margin-bottom: 15px;
+            background-color: #0f172a;
+            border-left: 3px solid #3b82f6;
+            padding: 12px;
+            margin-top: 10px;
+            margin-bottom: 20px;
             display: block;
         }}
         pre code {{
             font-family: 'DejaVuSansMono', monospace;
             background-color: transparent;
+            color: #f8fafc;
+            border: none;
             padding: 0;
-            font-size: 8.5pt;
+            font-size: 8pt;
+            line-height: 1.4;
         }}
         ul, ol {{
             margin-top: 5px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             padding-left: 20px;
         }}
         li {{
-            margin-bottom: 5px;
+            margin-bottom: 6px;
         }}
         table {{
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            margin-top: 15px;
+            margin-bottom: 20px;
         }}
         th, td {{
-            border: 1px solid #d1d5db;
-            padding: 8px;
+            border: 1px solid #e2e8f0;
+            padding: 8px 10px;
             text-align: left;
+            font-size: 9pt;
         }}
         th {{
-            background-color: #f3f4f6;
+            background-color: #f8fafc;
+            color: #1e293b;
             font-weight: bold;
+            border-bottom: 2px solid #cbd5e1;
+        }}
+        tr:nth-child(even) {{
+            background-color: #f8fafc;
+        }}
+        hr {{
+            border: none;
+            border-top: 1px solid #cbd5e1;
+            margin-top: 30px;
+            margin-bottom: 30px;
         }}
     </style>
     </head>
     <body>
+        <div id="header_content" style="text-align: right; font-size: 7.5pt; color: #64748b; border-bottom: 0.5px solid #cbd5e1; padding-bottom: 3px;">
+            SecOps AI - DevOps Portfolio Documentation
+        </div>
+        <div id="footer_content" style="text-align: center; font-size: 8pt; color: #64748b; border-top: 0.5px solid #cbd5e1; padding-top: 3px;">
+            Сторінка <pdf:pagenumber/> з <pdf:pagecount/>
+        </div>
         {html_content}
     </body>
     </html>
